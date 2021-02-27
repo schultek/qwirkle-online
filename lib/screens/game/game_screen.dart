@@ -27,6 +27,8 @@ class GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   TokenSelectorState? tokenSelector;
   QwirkleBoardState? board;
 
+  bool showReplaceAllButton = false;
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +49,7 @@ class GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   }
 
   void update() {
+    showReplaceAllButton = false;
     setState(() {});
   }
 
@@ -141,6 +144,25 @@ class GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           top: 20,
           child: Center(child: buildPlayerHint()),
         ),
+        AnimatedPositioned(
+          left: 0,
+          right: 0,
+          bottom: showReplaceAllButton ? 110 : 50,
+          duration: const Duration(milliseconds: 300),
+          child: AnimatedOpacity(
+            duration: const Duration(milliseconds: 300),
+            opacity: showReplaceAllButton ? 1 : 0,
+            child: Center(
+              child: actionButton(
+                onPressed: () {
+                  game.requestAction(GameAction.replaceTokens(game.playerId));
+                },
+                text: "Ersetze alle Steine",
+                color: Colors.orange,
+              ),
+            ),
+          ),
+        ),
         if (game.currentPlayer.value == game.playerId)
           Positioned(
             left: 0,
@@ -177,7 +199,10 @@ class GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   Widget buildPlayerActions() {
     if (game.currentMove.value?.placements.isEmpty ?? true) {
       return actionButton(
-        enabled: false,
+        onPressed: () {
+          setState(() => showReplaceAllButton = true);
+          Future.delayed(const Duration(seconds: 2), () => setState(() => showReplaceAllButton = false));
+        },
         text: "Platziere einen Stein",
       );
     } else {

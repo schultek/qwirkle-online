@@ -11,6 +11,7 @@ class GameAction with JsonEncodable {
   GameAction.removePlacement(this.playerId) : action = "remove-placement";
   GameAction.back(this.playerId) : action = "back";
   GameAction.finish(this.playerId) : action = "finish";
+  GameAction.replaceTokens(this.playerId) : action = "replace-tokens";
 
   static GameAction fromMap(Map<String, dynamic> map) {
     if (map["action"] == "placement") return PlacementAction.fromMap(map);

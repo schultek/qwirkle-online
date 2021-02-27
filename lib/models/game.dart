@@ -154,6 +154,23 @@ class Game {
 
           await currentPlayer.set(players.value[playerIndex].id);
           await playerTokensRef.set(ValueSubscription.encode(playerTokens));
+        } else if (action.action == "replace-tokens") {
+          var playerTokensRef = gameRef.child("players/${action.playerId}/tokens");
+
+          var tokenCount = ((await playerTokensRef.once("value")).snapshot.val() as List).length;
+
+          var newTokens = List.generate(tokenCount, (index) => Token(Token.randomTag()));
+
+          var playerIndex = players.value.indexWhere((p) => p.id == currentPlayer.value);
+          playerIndex = (playerIndex + 1) % players.value.length;
+
+          await Future.wait([
+            currentPlacement.set(null),
+            currentMove.set(null),
+          ]);
+
+          await currentPlayer.set(players.value[playerIndex].id);
+          await playerTokensRef.set(ValueSubscription.encode(newTokens));
         }
 
         await event.snapshot.ref.child("processed").set(true);
