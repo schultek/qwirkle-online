@@ -1,0 +1,48 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "games": {
+      ".read": "query.orderByChild == 'lastHeartbeat'",
+      "$gameId": {
+        ".read": true,
+        ".write": "!data.exists() || data.child('creatorUserId').val() == auth.uid",
+        "creatorUserId": {
+          ".write": "!data.exists()",
+          ".validate": true
+        },
+        "state": {
+          ".validate": true
+        },
+        "players": {
+          ".validate": true
+        },
+        "lastHeartbeat": {
+          ".validate": true
+        },
+        "board": {
+          ".validate": true
+        },
+        "currentPlayer": {
+          ".validate": true
+        },
+        "currentPlacement": {
+          ".validate": true
+        },
+        "currentMove": {
+          ".validate": true
+        },
+        "actions": {
+          ".write": true,
+          ".validate": true,
+          "$actionId": {
+            ".write": false
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    }
+  }
+}

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qwirkle_online/models/game_action.dart';
 
 import '../../main.dart';
 import '../../models/game.dart';
@@ -20,8 +21,8 @@ class _JoinScreenState extends State<JoinScreen> {
   void initState() {
     super.initState();
 
-    widget.game.canJoin().then((canJoin) {
-      if (canJoin == true) {
+    widget.game.hasJoined().then((hasJoined) {
+      if (hasJoined) {
         QwirkleApp.of(context).open(GameRoutePath.game(widget.game));
       }
     });
@@ -51,7 +52,8 @@ class _JoinScreenState extends State<JoinScreen> {
             onPressed: () async {
               if (_nickname == null) return;
 
-              bool allowJoin = await widget.game.join(_nickname!);
+              bool allowJoin =
+                  await widget.game.requestAction(JoinAction(widget.game.playerId, _nickname!), sendDuplicate: true);
               if (allowJoin) {
                 QwirkleApp.of(context).open(GameRoutePath.game(widget.game));
               } else {

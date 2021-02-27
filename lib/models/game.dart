@@ -74,37 +74,32 @@ class Game {
 
     isGameMaster = creatorUserId == playerId;
     if (isGameMaster) {
-      dbSubscriptions.add(gameRef.child("join").onChildAdded.listen((event) async {
-        var allowed = event.snapshot.val()["allowed"];
-        if (allowed != null) return;
-
-        var players = (await gameRef.child("players").once("value")).snapshot.val() as Map? ?? {};
-        var state = (await gameRef.child("state").once("value")).snapshot.val() as String;
-
-        if (state == "waiting" && players.length < 6) {
-          var userId = event.snapshot.key;
-          var nickname = event.snapshot.val()["nickname"];
-
-          await gameRef.child("players/$userId").set({
-            "nickname": nickname,
-            "points": 0,
-          });
-
-          await event.snapshot.ref.child("allowed").set(true);
-        } else {
-          await event.snapshot.ref.child("allowed").set(false);
-        }
-      }));
-
       dbSubscriptions.add(gameRef.child("actions").onChildAdded.listen((event) async {
         var action = GameAction.fromMap(event.snapshot.val() as Map<String, dynamic>);
 
-        if (action.playerId != currentPlayer.value || action.processed) {
+        if (action.result != null) {
+          return;
+        } else if (state.value == "waiting") {
+          if (action is! JoinAction) return;
+        } else if (action.playerId != currentPlayer.value) {
           return;
         }
 
-        if (action.action == "remove-placement") {
-          await currentPlacement.set(null);
+        dynamic result = true;
+
+        if (action is JoinAction) {
+          var players = (await gameRef.child("players").once("value")).snapshot.val() as Map? ?? {};
+          var state = (await gameRef.child("state").once("value")).snapshot.val() as String;
+
+          if (state == "waiting" && players.length < 6) {
+            await gameRef.child("players/${action.playerId}").set({
+              "nickname": action.nickname,
+              "points": 0,
+            });
+            result = true;
+          } else {
+            result = false;
+          }
         } else if (action is PlacementAction) {
           var allowed = isValidPlacement(action);
 
@@ -121,6 +116,8 @@ class Game {
           } else {
             await currentPlacement.set(TokenPlacement(action.pos, action.token, allowed));
           }
+        } else if (action.action == "remove-placement") {
+          await currentPlacement.set(null);
         } else if (action.action == "back") {
           var placements = <TokenPlacement>[...currentMove.value?.placements ?? []];
 
@@ -173,43 +170,25 @@ class Game {
           await playerTokensRef.set(ValueSubscription.encode(newTokens));
         }
 
-        await event.snapshot.ref.child("processed").set(true);
+        await event.snapshot.ref.child("result").set(result);
       }));
     }
   }
 
-  Future<void> requestAction(GameAction action, {bool sendDuplicate = false}) async {
-    if (!sendDuplicate && lastAction == action) return;
+  Future<T> requestAction<T>(GameAction action, {bool sendDuplicate = false}) async {
+    if (!sendDuplicate && lastAction == action) return lastAction!.result as T;
     var ref = gameRef.child("actions").push(action.toJson());
-    await ref.child("processed").onValue.first;
+    return (await ref.child("result").onValue.firstWhere((e) => e.snapshot.exists())).snapshot.val() as T;
   }
 
-  Future<bool?> canJoin() async {
-    var joinRef = await gameRef.child("join/$playerId").once("value");
+  Future<bool> hasJoined() async {
+    var playerRef = await gameRef.child("players/$playerId").once("value");
 
-    if (joinRef.snapshot.exists()) {
-      return joinRef.snapshot.val()["allowed"] as bool? ?? false;
+    if (playerRef.snapshot.exists()) {
+      return true;
     } else {
-      return null;
+      return false;
     }
-  }
-
-  Future<bool> join(String nickname) async {
-    var joinAllowed = await canJoin();
-    if (joinAllowed != null) {
-      return joinAllowed;
-    }
-
-    await gameRef.child("join/$playerId").set({
-      "nickname": nickname,
-      "allowed": null,
-    });
-
-    var allowedEntry = await gameRef.child("join/$playerId/allowed").onValue.firstWhere((event) {
-      return event.snapshot.exists();
-    });
-
-    return allowedEntry.snapshot.val() as bool;
   }
 
   Future<void> startGame() async {

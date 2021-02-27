@@ -4,9 +4,9 @@ import 'value_subscription.dart';
 class GameAction with JsonEncodable {
   String playerId;
   String action;
-  bool processed = false;
+  dynamic? result;
 
-  GameAction._(this.playerId, this.action, [this.processed = false]);
+  GameAction._(this.playerId, this.action, [this.result]);
 
   GameAction.removePlacement(this.playerId) : action = "remove-placement";
   GameAction.back(this.playerId) : action = "back";
@@ -15,7 +15,8 @@ class GameAction with JsonEncodable {
 
   static GameAction fromMap(Map<String, dynamic> map) {
     if (map["action"] == "placement") return PlacementAction.fromMap(map);
-    return GameAction._(map["playerId"] as String, map["action"] as String, map["processed"] as bool? ?? false);
+    if (map["action"] == "join") return JoinAction.fromMap(map);
+    return GameAction._(map["playerId"] as String, map["action"] as String, map["result"]);
   }
 
   @override
@@ -33,17 +34,41 @@ class GameAction with JsonEncodable {
   int get hashCode => playerId.hashCode ^ action.hashCode;
 }
 
+class JoinAction extends GameAction {
+  String nickname;
+
+  JoinAction(String playerId, this.nickname, [dynamic? result]) : super._(playerId, "join", result);
+
+  static JoinAction fromMap(Map<String, dynamic> map) {
+    return JoinAction(map["playerId"] as String, map["nickname"] as String, map["result"]);
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        ...super.toJson(),
+        "nickname": nickname,
+      };
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      super == other && other is JoinAction && runtimeType == other.runtimeType && nickname == other.nickname;
+
+  @override
+  int get hashCode => super.hashCode ^ nickname.hashCode;
+}
+
 class PlacementAction extends GameAction {
   Pos pos;
   Token token;
   bool commit;
 
-  PlacementAction(String playerId, this.pos, this.token, this.commit, [bool processed = false])
-      : super._(playerId, "placement", processed);
+  PlacementAction(String playerId, this.pos, this.token, this.commit, [dynamic? result])
+      : super._(playerId, "placement", result);
 
   static PlacementAction fromMap(Map<String, dynamic> map) {
     return PlacementAction(map["playerId"] as String, Pos(map["x"] as int, map["y"] as int),
-        Token(map["token"] as String), map["commit"] as bool, map["processed"] as bool? ?? false);
+        Token(map["token"] as String), map["commit"] as bool, map["result"]);
   }
 
   @override
