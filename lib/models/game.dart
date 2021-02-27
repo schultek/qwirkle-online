@@ -68,8 +68,6 @@ class Game {
   Future<void> _setup() async {
     var creatorUserId = (await gameRef.child("creatorUserId").once("value")).snapshot.val();
 
-    print("Setup");
-
     dbSubscriptions.add(gameRef.child("actions").onChildAdded.listen((event) {
       lastAction = GameAction.fromMap(event.snapshot.val() as Map<String, dynamic>);
     }));
@@ -211,6 +209,9 @@ class Game {
 
   bool isValidPlacement(PlacementAction placement) {
     var cells = board.value.board;
+
+    if (cells[Pos(0, 0)] is TokenPlaceholder) return true;
+
     var token = placement.token;
     var pos = placement.pos;
     bool? verticalSameColor, horizontalSameColor;
@@ -288,8 +289,6 @@ class Game {
 
     var sameColumn = moves.every((m) => m.pos.x == pos.x) && hasColumn;
     var sameRow = moves.every((m) => m.pos.y == pos.y) && hasRow;
-
-    print("$hasColumn $hasRow $sameColumn $sameRow");
 
     return sameRow || sameColumn;
   }

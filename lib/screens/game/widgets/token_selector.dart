@@ -52,7 +52,6 @@ class TokenSelectorState extends State<TokenSelector> with TickerProviderStateMi
   void didChangeDependencies() {
     super.didChangeDependencies();
     var w = MediaQuery.of(context).size.width;
-    print(w);
     if (w < 300) {
       itemSize = 50;
       itemPadding = 4;
