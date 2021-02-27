@@ -16,6 +16,7 @@ dependencies:
   shortid: ^0.1.1
   google_fonts: ^1.1.2
   tuple: ^1.0.3
+  clipboard: ^0.1.2+8
 
 dev_dependencies:
   flutter_test:
