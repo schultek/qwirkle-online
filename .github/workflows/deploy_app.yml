@@ -1,0 +1,39 @@
+on:
+  push:
+    branches:
+      - develop
+      - master
+
+name: Build and Deploy App
+env:
+  FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+
+jobs:
+  deploy:
+    name: Build and Deploy App
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v2
+
+      - name: Cache Flutter Dependencies
+        uses: actions/cache@v1
+        with:
+          path: /opt/hostedtoolcache/flutter
+          key: ubuntu-latest-flutter
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v1
+        with:
+          channel: beta
+
+      - name: Build Web App
+        run: |
+          flutter pub get
+          flutter config --enable-web
+          flutter build web --no-sound-null-safety
+
+      - name: Deploy to Firebase
+        uses: w9jds/firebase-action@master
+        with:
+          args: deploy --only hosting
