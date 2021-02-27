@@ -185,7 +185,7 @@ class QwirkleBoardState extends State<QwirkleBoard> {
     return placements.map((p) {
       return buildCell(
         p.pos,
-        QwirkleToken.placeholder(Colors.green.withOpacity(0.1), Colors.transparent),
+        QwirkleToken.placeholder(Colors.green.withOpacity(0.5), Colors.transparent),
       );
     }).toList();
   }
