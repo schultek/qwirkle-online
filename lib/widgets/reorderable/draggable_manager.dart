@@ -31,8 +31,8 @@ class DraggableManager with Drag {
   Offset? _dragOffset;
   double get dragSize => gameScreenState.board!.boardScale * QwirkleToken.size;
   Widget? _dragWidget;
-  double? _dragDecorationOpacity;
-  AnimationController? _dragScaleAnimation;
+  double _dragDecorationOpacity = 0;
+  late AnimationController _dragScaleAnimation;
 
   AnimationController? _finalAnimation;
 
@@ -67,8 +67,8 @@ class DraggableManager with Drag {
     return Positioned.fromRect(
       rect: Rect.fromCenter(
         center: _dragOffset!,
-        width: lerpDouble(TokenSelectorState.itemSize, dragSize, _dragScaleAnimation!.value)!,
-        height: lerpDouble(TokenSelectorState.itemSize, dragSize, _dragScaleAnimation!.value)!,
+        width: lerpDouble(TokenSelectorState.itemSize, dragSize, _dragScaleAnimation.value)!,
+        height: lerpDouble(TokenSelectorState.itemSize, dragSize, _dragScaleAnimation.value)!,
       ),
       child: FittedBox(
         fit: BoxFit.fitHeight,
@@ -85,7 +85,7 @@ class DraggableManager with Drag {
                   child: _dragWidget!,
                 ),
               ),
-              _dragDecorationOpacity!,
+              _dragDecorationOpacity,
             ),
           ),
         ),
@@ -131,7 +131,7 @@ class DraggableManager with Drag {
     _dragDecorationOpacity = 1.0;
 
     _isDropAccepted = false;
-    _dragScaleAnimation!.value = 0;
+    _dragScaleAnimation.value = 0;
     _isOverWidgetSelector = true;
 
     var renderBox = draggedItem.context.findRenderObject() as RenderBox;
@@ -164,7 +164,7 @@ class DraggableManager with Drag {
     if (details.globalPosition.dx < tokenSelector!.leftEdge) {
       if (_isOverWidgetSelector) {
         _isOverWidgetSelector = false;
-        _dragScaleAnimation!.forward();
+        _dragScaleAnimation.forward();
       }
 
       var accepted = board!.checkDropPosition(_dragOffset!, _items[dragging]!.widget.value);
@@ -172,7 +172,7 @@ class DraggableManager with Drag {
     } else {
       if (!_isOverWidgetSelector) {
         _isOverWidgetSelector = true;
-        _dragScaleAnimation!.reverse();
+        _dragScaleAnimation.reverse();
         gameScreenState.game.requestAction(GameAction.removePlacement(gameScreenState.game.playerId));
       }
       if (_isDropAccepted) {
@@ -210,7 +210,7 @@ class DraggableManager with Drag {
 
     var dragOffset = _dragOffset;
 
-    var dragScale = _dragScaleAnimation!.value;
+    var dragScale = _dragScaleAnimation.value;
     var targetScale = _isDropAccepted ? 1 : 0;
 
     var dropValue = _items[dragging]!.widget.value;
@@ -227,12 +227,12 @@ class DraggableManager with Drag {
       gameScreenState.game.requestAction(GameAction.removePlacement(gameScreenState.game.playerId));
     }
 
-    _dragScaleAnimation!.stop();
+    _dragScaleAnimation.stop();
 
     _finalAnimation!.addListener(() {
       _dragOffset = Offset.lerp(dragOffset, targetOffset, _finalAnimation!.value);
       _dragDecorationOpacity = 1.0 - _finalAnimation!.value;
-      _dragScaleAnimation!.value = lerpDouble(dragScale, targetScale, _finalAnimation!.value)!;
+      _dragScaleAnimation.value = lerpDouble(dragScale, targetScale, _finalAnimation!.value)!;
       _entry!.markNeedsBuild();
     });
 
@@ -259,6 +259,7 @@ class DraggableManager with Drag {
   void _onDragFinished() {
     _entry!.remove();
     _entry = null;
+    _dragWidget = null;
   }
 
   void _hapticFeedback() {
