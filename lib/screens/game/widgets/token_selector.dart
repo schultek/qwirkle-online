@@ -76,6 +76,8 @@ class TokenSelectorState extends State<TokenSelector> with TickerProviderStateMi
     var oldTokens = [...tokens];
     var newTokens = [...game.tokens.value];
 
+    var tokenCount = game.players.value.firstWhere((p) => p.id == game.playerId).tokenCount;
+
     var updatedTokens = <Cell>[];
 
     for (var token in oldTokens) {
@@ -95,6 +97,11 @@ class TokenSelectorState extends State<TokenSelector> with TickerProviderStateMi
       } else {
         updatedTokens.add(token);
       }
+    }
+
+    while (updatedTokens.length > tokenCount) {
+      var index = updatedTokens.indexWhere((t) => t is TokenPlaceholder);
+      updatedTokens.removeAt(index);
     }
 
     setState(() {

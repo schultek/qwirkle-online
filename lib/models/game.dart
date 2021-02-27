@@ -3,6 +3,7 @@ import 'dart:math';
 
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:firebase/firebase.dart';
+import 'package:tuple/tuple.dart';
 
 import 'board.dart';
 import 'game_action.dart';
@@ -12,13 +13,23 @@ import 'value_subscription.dart';
 class Player {
   String id;
   String nickname;
+  int tokenCount;
   List<Token> tokens;
+  String color;
+  double points;
 
-  Player(this.id, this.nickname, this.tokens);
+  Player(this.id, this.nickname, this.tokenCount, this.tokens, this.points, this.color);
 
   static List<Player> fromIdMap(Map<String, dynamic>? playerMap) {
     return playerMap?.entries.map((entry) {
-          return Player(entry.key, entry.value["nickname"] as String, Token.fromList(entry.value["tokens"] as List));
+          return Player(
+            entry.key,
+            entry.value["nickname"] as String,
+            (entry.value["tokenCount"] as num).round(),
+            Token.fromList(entry.value["tokens"] as List),
+            entry.value["points"] as double,
+            entry.value["color"] as String,
+          );
         }).toList() ??
         [];
   }
@@ -44,6 +55,8 @@ class Game {
     return valueSubscriptions[path] as ValueSubscription<T>;
   }
 
+  Function(dynamic v) get encode => ValueSubscription.encode;
+
   ValueSubscription<String> get state => subscribedValue("state", "");
   ValueSubscription<List<Player>> get players => subscribedValue("players", [], Player.fromIdMap);
   ValueSubscription<Board> get board => subscribedValue("board", Board({}), Board.fromMap);
@@ -54,6 +67,8 @@ class Game {
   ValueSubscription<PlayerMove?> get currentMove => subscribedValue("currentMove", null, PlayerMove.fromList);
 
   ValueSubscription<List<Token>> get tokens => subscribedValue("players/$playerId/tokens", <Token>[], Token.fromList);
+
+  late Stream<Tuple2<String, String>> messages;
 
   static Future<Game> setup(String id, String playerId) async {
     var game = Game._(id, playerId);
@@ -66,6 +81,8 @@ class Game {
   List<StreamSubscription> dbSubscriptions = [];
 
   Future<void> _setup() async {
+    messages = gameRef.child("messages").onChildAdded.map((e) => Tuple2(e.snapshot.key, e.snapshot.val() as String));
+
     var creatorUserId = (await gameRef.child("creatorUserId").once("value")).snapshot.val();
 
     dbSubscriptions.add(gameRef.child("actions").onChildAdded.listen((event) {
@@ -74,6 +91,12 @@ class Game {
 
     isGameMaster = creatorUserId == playerId;
     if (isGameMaster) {
+      state;
+      currentPlayer;
+      players;
+      currentMove;
+      board;
+
       dbSubscriptions.add(gameRef.child("actions").onChildAdded.listen((event) async {
         var action = GameAction.fromMap(event.snapshot.val() as Map<String, dynamic>);
 
@@ -88,13 +111,12 @@ class Game {
         dynamic result = true;
 
         if (action is JoinAction) {
-          var players = (await gameRef.child("players").once("value")).snapshot.val() as Map? ?? {};
-          var state = (await gameRef.child("state").once("value")).snapshot.val() as String;
-
-          if (state == "waiting" && players.length < 6) {
+          if (state.value == "waiting" && players.value.length < 6) {
             await gameRef.child("players/${action.playerId}").set({
               "nickname": action.nickname,
               "points": 0,
+              "tokenCount": 5,
+              "color": Token.randomTag()[0],
             });
             result = true;
           } else {
@@ -110,7 +132,7 @@ class Game {
             await Future.wait([
               board.set(Board({...board.value.board, action.pos: action.token})),
               currentMove.set(PlayerMove.join(currentMove.value, TokenPlacement(action.pos, action.token, true))),
-              playerTokensRef.set(ValueSubscription.encode([...playerTokens]..remove(action.token))),
+              playerTokensRef.set(encode([...playerTokens]..remove(action.token))),
               currentPlacement.set(null),
             ]);
           } else {
@@ -124,39 +146,50 @@ class Game {
           if (placements.isNotEmpty) {
             var last = placements.removeLast();
 
-            var playerTokensRef = gameRef.child("players/${action.playerId}/tokens");
-            var playerTokens = Token.fromList((await playerTokensRef.once("value")).snapshot.val() as List);
+            var player = players.value.firstWhere((p) => p.id == action.playerId);
 
             await currentPlacement.set(null);
             await board.set(Board({...board.value.board}..remove(last.pos)));
-            await playerTokensRef.set(ValueSubscription.encode([...playerTokens, last.token]));
+            await gameRef.child("players/${action.playerId}/tokens").set(encode([...player.tokens, last.token]));
             await currentMove.set(PlayerMove(placements));
           }
         } else if (action.action == "finish") {
-          var playerTokensRef = gameRef.child("players/${action.playerId}/tokens");
+          if (currentMove.value?.placements.isNotEmpty ?? false) {
+            var player = players.value.firstWhere((p) => p.id == action.playerId);
 
-          var playerTokens = Token.fromList((await playerTokensRef.once("value")).snapshot.val() as List);
+            Tuple2<double, int> score = calculateScore();
 
-          while (playerTokens.length < 5) {
-            playerTokens.add(Token(Token.randomTag()));
+            var tokens = [...player.tokens];
+            var newTokenCount = player.tokenCount - score.item2;
+
+            while (tokens.length < newTokenCount) {
+              tokens.add(Token(Token.randomTag()));
+            }
+
+            var playerIndex = players.value.indexWhere((p) => p.id == currentPlayer.value);
+            playerIndex = (playerIndex + 1) % players.value.length;
+
+            gameRef.child("messages").push("+${score.item1} Punkte für ${player.nickname}");
+
+            if (newTokenCount == 0) {
+              gameRef.child("messages").push("${player.nickname} gewinnt!");
+            }
+
+            await Future.wait([
+              currentPlacement.set(null),
+              currentMove.set(null),
+            ]);
+
+            await currentPlayer.set(players.value[playerIndex].id);
+            await gameRef.child("players/${action.playerId}/tokens").set(encode(tokens));
+            await gameRef.child("players/${action.playerId}/points").set(player.points + score.item1);
+            await gameRef.child("players/${action.playerId}/tokenCount").set(newTokenCount);
+          } else {
+            result = false;
           }
-
-          var playerIndex = players.value.indexWhere((p) => p.id == currentPlayer.value);
-          playerIndex = (playerIndex + 1) % players.value.length;
-
-          await Future.wait([
-            currentPlacement.set(null),
-            currentMove.set(null),
-          ]);
-
-          await currentPlayer.set(players.value[playerIndex].id);
-          await playerTokensRef.set(ValueSubscription.encode(playerTokens));
         } else if (action.action == "replace-tokens") {
-          var playerTokensRef = gameRef.child("players/${action.playerId}/tokens");
-
-          var tokenCount = ((await playerTokensRef.once("value")).snapshot.val() as List).length;
-
-          var newTokens = List.generate(tokenCount, (index) => Token(Token.randomTag()));
+          var player = players.value.firstWhere((p) => p.id == action.playerId);
+          var newTokens = List.generate(player.tokenCount, (index) => Token(Token.randomTag()));
 
           var playerIndex = players.value.indexWhere((p) => p.id == currentPlayer.value);
           playerIndex = (playerIndex + 1) % players.value.length;
@@ -167,12 +200,91 @@ class Game {
           ]);
 
           await currentPlayer.set(players.value[playerIndex].id);
-          await playerTokensRef.set(ValueSubscription.encode(newTokens));
+          await gameRef.child("players/${action.playerId}/tokens").set(encode(newTokens));
         }
 
         await event.snapshot.ref.child("result").set(result);
       }));
     }
+  }
+
+  Tuple2<double, int> calculateScore() {
+    var placements = currentMove.value!.placements;
+    var cells = board.value.board;
+
+    Map<int, int> rows = {}, columns = {};
+
+    for (var p in placements) {
+      var pos = p.pos;
+
+      if (!rows.containsKey(pos.y)) {
+        rows[pos.y] = 1;
+
+        while (true) {
+          pos = Pos(pos.x - 1, pos.y);
+          var left = cells[pos];
+          if (left == null || left is! Token) break;
+          rows[pos.y] = rows[pos.y]! + 1;
+        }
+
+        pos = p.pos;
+
+        while (true) {
+          pos = Pos(pos.x + 1, pos.y);
+          var right = cells[pos];
+          if (right == null || right is! Token) break;
+          rows[pos.y] = rows[pos.y]! + 1;
+        }
+      }
+
+      pos = p.pos;
+      if (!columns.containsKey(pos.x)) {
+        columns[pos.x] = 1;
+
+        while (true) {
+          pos = Pos(pos.x, pos.y - 1);
+          var above = cells[pos];
+          if (above == null || above is! Token) break;
+          columns[pos.x] = columns[pos.x]! + 1;
+        }
+
+        pos = p.pos;
+
+        while (true) {
+          pos = Pos(pos.x, pos.y + 1);
+          var below = cells[pos];
+          if (below == null || below is! Token) break;
+          columns[pos.x] = columns[pos.x]! + 1;
+        }
+      }
+    }
+
+    double points = 0;
+    int lines = 0;
+
+    for (var row in rows.values) {
+      if (row < 2) continue;
+      points += row;
+      if (row == 6) {
+        points += 6;
+        lines++;
+      }
+    }
+
+    for (var column in columns.values) {
+      if (column < 2) continue;
+      points += column;
+      if (column == 6) {
+        points += 6;
+        lines++;
+      }
+    }
+
+    if (rows.length == 1 && rows.values.first == 1 && columns.length == 1 && columns.values.first == 1) {
+      points++;
+    }
+
+    return Tuple2(points, lines);
   }
 
   Future<T> requestAction<T>(GameAction action, {bool sendDuplicate = false}) async {
@@ -286,11 +398,15 @@ class Game {
     var sameColumn = moves.every((m) => m.pos.x == pos.x);
     var sameRow = moves.every((m) => m.pos.y == pos.y);
 
-    return (sameRow && hasRow) || (sameColumn && hasColumn) || ((sameRow || sameColumn) && !hasColumn && !hasRow);
+    return (sameRow && hasRow) ||
+        (sameColumn && hasColumn) ||
+        ((sameRow || sameColumn) && !hasColumn && !hasRow && moves.any((m) => m.pos == Pos(0, 0)));
   }
 
   void dispose() {
     valueSubscriptions.values.forEach((s) => s.dispose());
+    valueSubscriptions = {};
     dbSubscriptions.forEach((s) => s.cancel());
+    dbSubscriptions = [];
   }
 }

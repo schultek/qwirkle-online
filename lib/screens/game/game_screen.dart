@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:tuple/tuple.dart';
 
 import '../../models/game.dart';
 import '../../models/game_action.dart';
+import '../../models/painters.dart';
 import '../../widgets/reorderable/draggable_manager.dart';
 import 'widgets/board.dart';
 import 'widgets/token_selector.dart';
@@ -28,6 +30,8 @@ class GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   QwirkleBoardState? board;
 
   bool showReplaceAllButton = false;
+  bool scoreBoardHovered = false;
+  bool persistentScoreBoard = true;
 
   @override
   void initState() {
@@ -44,7 +48,6 @@ class GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
   @override
   void dispose() {
     super.dispose();
-
     game.dispose();
   }
 
@@ -132,12 +135,7 @@ class GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
           bottom: 0,
           child: TokenSelector(),
         ),
-        Positioned(
-          left: 0,
-          top: 0,
-          bottom: 0,
-          child: buildScoreBoard(),
-        ),
+        buildScoreBoard(),
         Positioned(
           left: 0,
           right: 0,
@@ -170,12 +168,144 @@ class GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
             bottom: 50,
             child: Center(child: buildPlayerActions()),
           ),
+        Positioned(
+          top: 70,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: StreamBuilder<Tuple2<String, String>>(
+              stream: game.messages,
+              builder: (context, snapshot) {
+                if (snapshot.hasData) {
+                  return TweenAnimationBuilder<double>(
+                    key: ValueKey(snapshot.data!.item1),
+                    duration: const Duration(seconds: 4),
+                    tween: Tween(begin: 0, end: 1),
+                    builder: (context, a, _) {
+                      return Opacity(
+                        opacity: a <= 0.1
+                            ? a * 5
+                            : a >= 0.9
+                                ? 1 - (a - 0.9) * 10
+                                : 1,
+                        child: Text(
+                          snapshot.data!.item2,
+                          style: const TextStyle(color: Colors.green, fontSize: 14, fontWeight: FontWeight.bold),
+                        ),
+                      );
+                    },
+                  );
+                } else {
+                  return Container();
+                }
+              },
+            ),
+          ),
+        )
       ],
     );
   }
 
   Widget buildScoreBoard() {
-    return Container();
+    return AnimatedPositioned(
+      left: persistentScoreBoard || scoreBoardHovered ? 0 : -140,
+      top: 0,
+      bottom: 0,
+      duration: const Duration(milliseconds: 300),
+      child: Center(
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 50),
+          width: 170,
+          decoration: const BoxDecoration(
+            color: Colors.black26,
+            borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.only(left: 15, top: 5, bottom: 5),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: ListTile.divideTiles(
+                            context: context,
+                            tiles: game.players.value.map((p) {
+                              return playerAvatar(p);
+                            }).toList(),
+                            color: Colors.white24)
+                        .toList(),
+                  ),
+                ),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      persistentScoreBoard = !persistentScoreBoard;
+                    });
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(4),
+                    child: Icon(
+                      persistentScoreBoard ? Icons.chevron_left : Icons.chevron_right,
+                      color: Colors.white38,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget playerAvatar(Player player) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 0),
+      leading: CircleAvatar(
+        backgroundColor: SymbolPainter.colorFromTag(player.color),
+        radius: 18,
+        child: Text(
+          player.nickname[0],
+          style: const TextStyle(fontSize: 24, color: Colors.white, fontWeight: FontWeight.bold),
+        ),
+      ),
+      title: Text(player.nickname, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 2),
+          Text("${player.points} Punkte", style: const TextStyle(color: Colors.white)),
+          const SizedBox(height: 2),
+          Row(
+            children: List.filled(
+              player.tokens.length,
+              Container(
+                margin: const EdgeInsets.only(right: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+                width: 8,
+                height: 8,
+              ),
+              growable: true,
+            )..addAll(List.filled(
+                player.tokenCount - player.tokens.length,
+                Container(
+                  margin: const EdgeInsets.only(right: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white38,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                  width: 8,
+                  height: 8,
+                ),
+              )),
+          )
+        ],
+      ),
+    );
   }
 
   Widget buildPlayerHint() {

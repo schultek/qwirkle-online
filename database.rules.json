@@ -39,6 +39,9 @@
             ".write": false
           }
         },
+        "messages": {
+          ".validate": true
+        },
         "$other": {
           ".validate": false
         }
