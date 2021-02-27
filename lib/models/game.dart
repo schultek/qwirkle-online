@@ -287,10 +287,10 @@ class Game {
 
     pos = placement.pos;
 
-    var sameColumn = moves.every((m) => m.pos.x == pos.x) && hasColumn;
-    var sameRow = moves.every((m) => m.pos.y == pos.y) && hasRow;
+    var sameColumn = moves.every((m) => m.pos.x == pos.x);
+    var sameRow = moves.every((m) => m.pos.y == pos.y);
 
-    return sameRow || sameColumn || (!hasColumn && !hasRow);
+    return (sameRow && hasRow) || (sameColumn && hasColumn) || ((sameRow || sameColumn) && !hasColumn && !hasRow);
   }
 
   void dispose() {
