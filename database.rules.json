@@ -7,7 +7,7 @@
       ".indexOn": "lastHeartbeat",
       "$gameId": {
         ".read": true,
-        ".write": "!data.exists() || data.child('creatorUserId').val() == auth.uid || data.child('lastHeartbeat') < now - 7200000",
+        ".write": "!data.exists() || data.child('creatorUserId').val() == auth.uid || data.child('lastHeartbeat').val() < now - 7200000",
         "creatorUserId": {
           ".write": "!data.exists()",
           ".validate": true
