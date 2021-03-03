@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:collection';
 import 'dart:ui';
 
@@ -8,10 +9,9 @@ import 'package:flutter/services.dart';
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:tuple/tuple.dart';
 
-import '../../models/game_action.dart';
 import '../../screens/game/game_screen.dart';
+import '../../screens/game/painters/token_painter_mixin.dart';
 import '../../screens/game/widgets/board.dart';
-import '../../screens/game/widgets/token.dart';
 import '../../screens/game/widgets/token_selector.dart';
 import 'draggable_item.dart';
 
@@ -26,10 +26,14 @@ class DraggableManager with Drag {
   final Map<Key, DraggableItemState> _items = {};
   MultiDragGestureRecognizer? _recognizer;
 
+  final StreamController _entryShouldRebuild = StreamController.broadcast();
   OverlayEntry? _entry;
 
   Offset? _dragOffset;
-  double get dragSize => gameScreenState.board!.boardScale * QwirkleToken.size;
+
+  double get boardScale => gameScreenState.board!.transform.value.scale;
+  double get dragSize => boardScale * TokenPainterMixin.grid;
+
   Widget? _dragWidget;
   double _dragDecorationOpacity = 0;
   late AnimationController _dragScaleAnimation;
@@ -48,9 +52,7 @@ class DraggableManager with Drag {
       duration: const Duration(milliseconds: 200),
       value: 0,
     )..addListener(() {
-        if (_entry != null) {
-          _entry!.markNeedsBuild();
-        }
+        _entryShouldRebuild.add(1);
       });
   }
 
@@ -64,29 +66,21 @@ class DraggableManager with Drag {
   }
 
   Widget _buildDragProxy(BuildContext context) {
-    return Positioned.fromRect(
-      rect: Rect.fromCenter(
-        center: _dragOffset!,
-        width: lerpDouble(TokenSelectorState.itemSize, dragSize, _dragScaleAnimation.value)!,
-        height: lerpDouble(TokenSelectorState.itemSize, dragSize, _dragScaleAnimation.value)!,
-      ),
-      child: FittedBox(
-        fit: BoxFit.fitHeight,
+    return StreamBuilder(
+      stream: _entryShouldRebuild.stream,
+      builder: (context, _) => Positioned.fromRect(
+        rect: Rect.fromCenter(
+          center: _dragOffset!,
+          width: lerpDouble(TokenSelectorState.itemSize, dragSize, _dragScaleAnimation.value)!,
+          height: lerpDouble(TokenSelectorState.itemSize, dragSize, _dragScaleAnimation.value)!,
+        ),
         child: MouseRegion(
           cursor: SystemMouseCursors.grabbing,
-          child: SizedBox.fromSize(
-            size: Size(dragSize, dragSize),
-            child: gameScreenState.decorateItem(
-              IgnorePointer(
-                child: MediaQuery.removePadding(
-                  context: context,
-                  removeTop: true,
-                  removeBottom: true,
-                  child: _dragWidget!,
-                ),
-              ),
-              _dragDecorationOpacity,
+          child: gameScreenState.decorateItem(
+            IgnorePointer(
+              child: _dragWidget!,
             ),
+            _dragDecorationOpacity,
           ),
         ),
       ),
@@ -152,7 +146,7 @@ class DraggableManager with Drag {
     var draggedItem = _items[_dragging];
     if (draggedItem != null) {
       _dragWidget = draggedItem.widget.child;
-      _entry!.markNeedsBuild();
+      _entryShouldRebuild.add(1);
     }
   }
 
@@ -167,23 +161,18 @@ class DraggableManager with Drag {
         _dragScaleAnimation.forward();
       }
 
-      var accepted = board!.checkDropPosition(_dragOffset!, _items[dragging]!.widget.value);
-      _isDropAccepted = accepted;
+      _isDropAccepted = board!.checkDropPosition(_dragOffset!, _items[dragging]!.widget.value);
     } else {
       if (!_isOverWidgetSelector) {
         _isOverWidgetSelector = true;
         _dragScaleAnimation.reverse();
-        gameScreenState.game.requestAction(GameAction.removePlacement(gameScreenState.game.playerId));
-      }
-      if (_isDropAccepted) {
+
+        board!.cancelDrop();
         _isDropAccepted = false;
-        board!.cancelDrop(_dragging!);
       }
     }
 
-    if (_entry != null) {
-      _entry!.markNeedsBuild();
-    }
+    _entryShouldRebuild.add(1);
   }
 
   @override
@@ -211,20 +200,19 @@ class DraggableManager with Drag {
     var dragOffset = _dragOffset;
 
     var dragScale = _dragScaleAnimation.value;
+
     var targetScale = _isDropAccepted ? 1 : 0;
 
     var dropValue = _items[dragging]!.widget.value;
-    _isDropAccepted &= gameScreenState.game.currentPlacement.value?.isAllowed ?? false;
 
     Offset targetOffset;
     if (_isDropAccepted) {
-      targetOffset = board!.toTokenOffset(_dragOffset!);
+      targetOffset = board!.toTokenOffset(_dragOffset!) + Offset(dragSize / 2, dragSize / 2);
     } else {
       var targetSize = TokenSelectorState.itemSize / 2;
       var renderBox = draggedItem.context.findRenderObject() as RenderBox;
       targetOffset = renderBox.localToGlobal(Offset.zero) + Offset(targetSize, targetSize);
-
-      gameScreenState.game.requestAction(GameAction.removePlacement(gameScreenState.game.playerId));
+      board!.cancelDrop();
     }
 
     _dragScaleAnimation.stop();
@@ -233,7 +221,7 @@ class DraggableManager with Drag {
       _dragOffset = Offset.lerp(dragOffset, targetOffset, _finalAnimation!.value);
       _dragDecorationOpacity = 1.0 - _finalAnimation!.value;
       _dragScaleAnimation.value = lerpDouble(dragScale, targetScale, _finalAnimation!.value)!;
-      _entry!.markNeedsBuild();
+      _entryShouldRebuild.add(1);
     });
 
     _recognizer?.dispose();
@@ -251,15 +239,11 @@ class DraggableManager with Drag {
       }
 
       _dragging = null;
-      _onDragFinished();
+      _entry!.remove();
+      _entry = null;
+      _dragWidget = null;
       draggedItem.update();
     }
-  }
-
-  void _onDragFinished() {
-    _entry!.remove();
-    _entry = null;
-    _dragWidget = null;
   }
 
   void _hapticFeedback() {

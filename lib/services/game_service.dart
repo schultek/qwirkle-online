@@ -27,9 +27,9 @@ class GameService {
     await gameRef.set({
       "creatorUserId": await AuthService.getUserId(),
       "state": "waiting",
-      "currentPlayer": null,
+      "currentPlayerId": null,
       "players": {},
-      "lastHeartbeat": DateTime.now().toUtc().toIso8601String(),
+      "lastHeartbeat": ServerValue.TIMESTAMP,
       "board": {},
     });
 
@@ -37,11 +37,16 @@ class GameService {
   }
 
   static Future<void> removeOldGames() async {
-    var query = await db
-        .ref("games")
-        .orderByChild("lastHeartbeat")
-        .endAt(DateTime.now().subtract(const Duration(hours: 2)).toUtc().toIso8601String())
-        .once("value");
-    query.snapshot.forEach((child) => child.ref.remove());
+    try {
+      var query = await db
+          .ref("games")
+          .orderByChild("lastHeartbeat")
+          .endAt(DateTime.now().subtract(const Duration(hours: 2)).toUtc().millisecondsSinceEpoch)
+          .once("value");
+      query.snapshot.forEach((child) => child.ref.remove());
+      print("Removed ${query.snapshot.numChildren()} games");
+    } catch (e) {
+      print("Error on removing old games: $e");
+    }
   }
 }

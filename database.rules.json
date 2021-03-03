@@ -4,9 +4,10 @@
     ".write": false,
     "games": {
       ".read": "query.orderByChild == 'lastHeartbeat'",
+      ".indexOn": "lastHeartbeat",
       "$gameId": {
         ".read": true,
-        ".write": "!data.exists() || data.child('creatorUserId').val() == auth.uid",
+        ".write": "!data.exists() || data.child('creatorUserId').val() == auth.uid || data.child('lastHeartbeat') < now - 7200000",
         "creatorUserId": {
           ".write": "!data.exists()",
           ".validate": true
@@ -23,7 +24,7 @@
         "board": {
           ".validate": true
         },
-        "currentPlayer": {
+        "currentPlayerId": {
           ".validate": true
         },
         "currentPlacement": {

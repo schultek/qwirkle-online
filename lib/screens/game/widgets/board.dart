@@ -2,67 +2,61 @@ import 'dart:math' as math;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
-import '../../../models/board.dart';
+import '../../../helpers/placement_helper.dart';
 import '../../../models/game.dart';
 import '../../../models/game_action.dart';
 import '../../../models/token.dart';
-import '../../../models/value_subscription.dart';
 import '../game_screen.dart';
-import 'token.dart';
-
-class TokenMove {
-  Token token;
-  Pos pos;
-  bool isAllowed;
-  TokenMove(this.pos, this.token, this.isAllowed);
-}
+import '../painters/board_painter.dart';
+import '../painters/hint_painter.dart';
+import '../painters/move_painter.dart';
+import '../painters/placement_painter.dart';
+import '../painters/token_painter_mixin.dart';
 
 class QwirkleBoard extends StatefulWidget {
-  final Game game;
-  const QwirkleBoard(this.game);
+  const QwirkleBoard();
 
   @override
   QwirkleBoardState createState() => QwirkleBoardState();
 }
 
-class QwirkleBoardState extends State<QwirkleBoard> {
-  Game get game => widget.game;
-  ValueSubscription<Board> get board => game.board;
+class BoardTransform {
+  Offset offset;
+  double scale;
+  BoardTransform(this.offset, this.scale);
+}
 
-  Offset boardOffset = Offset.zero;
-  double boardScale = 1.5;
+class QwirkleBoardState extends State<QwirkleBoard> {
+  ValueNotifier<BoardTransform> transform = ValueNotifier(BoardTransform(Offset.zero, 1.5));
+  ValueNotifier<PlacementHint?> placementHint = ValueNotifier(null);
 
   @override
   void initState() {
     super.initState();
     GameScreen.of(context).board = this;
-
-    game.currentPlacement.addListener(update);
-    game.board.addListener(update);
-    game.currentMove.addListener(update);
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    game.currentPlacement.removeListener(update);
-    game.board.removeListener(update);
-    game.currentMove.removeListener(update);
-  }
-
-  void update() {
-    setState(() {});
   }
 
   bool checkDropPosition(Offset offset, Token token) {
     var scenePos = toScenePos(offset);
+    print(scenePos.dx);
     var pos = Pos(scenePos.dx.round(), scenePos.dy.round());
-    if (board.value.board[pos] is TokenPlaceholder) {
-      game.requestAction(PlacementAction(game.playerId, pos, token, false));
-      return true;
+
+    var game = Provider.of<Game>(context, listen: false);
+    if (game.board[pos] is TokenPlaceholder) {
+      var action = PlacementAction(game.playerId, pos, token, false);
+      var isValid = isValidPlacement(action, game.board, game.currentMove);
+
+      placementHint.value = PlacementHint(pos, isValid);
+
+      game.requestAction(action);
+      return isValid;
     } else {
       game.requestAction(GameAction.removePlacement(game.playerId));
+
+      placementHint.value = null;
+
       return false;
     }
   }
@@ -70,16 +64,25 @@ class QwirkleBoardState extends State<QwirkleBoard> {
   Future<void> onDrop(Offset offset, Token token) async {
     var scenePos = toScenePos(offset);
     var pos = Pos(scenePos.dx.round(), scenePos.dy.round());
+
+    var game = Provider.of<Game>(context, listen: false);
     await game.requestAction(PlacementAction(game.playerId, pos, token, true));
+
+    placementHint.value = null;
   }
 
   Offset toTokenOffset(Offset offset) {
     var scenePos = toScenePos(offset);
     var pos = Pos(scenePos.dx.round(), scenePos.dy.round());
-    return toGlobalOffset(pos) + const Offset(QwirkleToken.size / 2, QwirkleToken.size / 2);
+    return toGlobalOffset(pos);
   }
 
-  void cancelDrop(Key key) {}
+  void cancelDrop() {
+    var game = Provider.of<Game>(context, listen: false);
+    game.requestAction(GameAction.removePlacement(game.playerId));
+
+    placementHint.value = null;
+  }
 
   Offset? boardCenter;
 
@@ -93,29 +96,70 @@ class QwirkleBoardState extends State<QwirkleBoard> {
           onScaleStart: _onScaleStart,
           onScaleUpdate: _onScaleUpdate,
           onScaleEnd: _onScaleEnd,
-          child: Stack(
-            children: [
-              const Positioned.fill(child: AbsorbPointer()),
-              ...game.board.value.map((pos, cell) => buildCell(
-                    pos,
-                    cell is Token ? QwirkleToken(cell) : QwirkleToken.placeholder(),
-                  )),
-              if (game.currentPlacement.value != null)
-                buildCell(
-                  game.currentPlacement.value!.pos,
-                  game.currentPlayer.value == game.playerId
-                      ? QwirkleToken.placeholder(game.currentPlacement.value!.isAllowed ? Colors.green : Colors.red)
-                      : Opacity(
-                          opacity: 0.5,
-                          child: QwirkleToken(game.currentPlacement.value!.token),
-                        ),
-                ),
-              if (game.currentMove.value != null) ...buildMoveBorder(game.currentMove.value!.placements),
-            ],
+          child: ValueListenableBuilder<BoardTransform>(
+            valueListenable: transform,
+            builder: (context, _, __) => Stack(
+              children: [
+                const Positioned.fill(child: AbsorbPointer()),
+                buildBoard(),
+                buildPlacementHint(),
+                buildTokenPlacement(),
+                buildMoveBorder(),
+              ],
+            ),
           ),
         ),
       );
     });
+  }
+
+  Widget buildBoard() {
+    return buildCell(
+      const Pos(0, 0),
+      Selector<Game, Map<Pos, Cell>>(
+        selector: (context, game) => game.board,
+        builder: (context, board, _) => CustomPaint(
+          painter: BoardPainter(board),
+        ),
+      ),
+    );
+  }
+
+  Widget buildTokenPlacement() {
+    return buildCell(
+      const Pos(0, 0),
+      Selector<Game, TokenPlacement?>(
+        selector: (context, game) => game.currentPlayerId != game.playerId ? game.currentPlacement : null,
+        builder: (context, placement, _) => CustomPaint(
+          painter: PlacementPainter(placement),
+        ),
+      ),
+    );
+  }
+
+  Widget buildMoveBorder() {
+    return buildCell(
+        const Pos(0, 0),
+        Selector<Game, List<TokenPlacement>>(
+          selector: (context, game) => game.currentMove,
+          builder: (context, move, _) {
+            return CustomPaint(
+              painter: MovePainter(move),
+            );
+          },
+        ));
+  }
+
+  Widget buildPlacementHint() {
+    return buildCell(
+      const Pos(0, 0),
+      ValueListenableBuilder<PlacementHint?>(
+        valueListenable: placementHint,
+        builder: (context, hint, _) => CustomPaint(
+          painter: HintPainter(hint),
+        ),
+      ),
+    );
   }
 
   Widget buildCell(Pos pos, Widget child) {
@@ -124,21 +168,26 @@ class QwirkleBoardState extends State<QwirkleBoard> {
       top: offset.dy,
       left: offset.dx,
       child: Transform.scale(
-        scale: boardScale,
+        scale: transform.value.scale,
+        alignment: Alignment.topLeft,
         child: child,
       ),
     );
   }
 
   Offset toGlobalOffset(Pos pos) {
-    var x = (pos.x * QwirkleToken.size + boardOffset.dx) * boardScale + boardCenter!.dx - QwirkleToken.size / 2;
-    var y = (pos.y * QwirkleToken.size + boardOffset.dy) * boardScale + boardCenter!.dy - QwirkleToken.size / 2;
+    var x = (pos.x * TokenPainterMixin.grid + transform.value.offset.dx) * transform.value.scale +
+        boardCenter!.dx -
+        TokenPainterMixin.grid / 2 * transform.value.scale;
+    var y = (pos.y * TokenPainterMixin.grid + transform.value.offset.dy) * transform.value.scale +
+        boardCenter!.dy -
+        TokenPainterMixin.grid / 2 * transform.value.scale;
     return Offset(x, y);
   }
 
   Offset toScenePos(Offset pos) {
-    var x = ((pos.dx - boardCenter!.dx) / boardScale - boardOffset.dx) / QwirkleToken.size;
-    var y = ((pos.dy - boardCenter!.dy) / boardScale - boardOffset.dy) / QwirkleToken.size;
+    var x = ((pos.dx - boardCenter!.dx) / transform.value.scale - transform.value.offset.dx) / TokenPainterMixin.grid;
+    var y = ((pos.dy - boardCenter!.dy) / transform.value.scale - transform.value.offset.dy) / TokenPainterMixin.grid;
     return Offset(x, y);
   }
 
@@ -148,10 +197,8 @@ class QwirkleBoardState extends State<QwirkleBoard> {
         return;
       }
       double scaleChange = math.exp(-event.scrollDelta.dy / 200);
-      boardScale *= scaleChange;
-      setState(() {
-        boardScale = math.min(3, math.max(0.3, boardScale));
-      });
+      double newScale = math.min(3, math.max(0.3, transform.value.scale * scaleChange));
+      transform.value = BoardTransform(transform.value.offset, newScale);
     }
   }
 
@@ -159,34 +206,25 @@ class QwirkleBoardState extends State<QwirkleBoard> {
   Offset? _offsetStart;
 
   void _onScaleStart(ScaleStartDetails details) {
-    _scaleStart = boardScale;
+    _scaleStart = transform.value.scale;
     _offsetStart = details.localFocalPoint;
   }
 
   void _onScaleUpdate(ScaleUpdateDetails details) {
+    double newScale = transform.value.scale;
+    Offset newOffset = transform.value.offset;
     if (details.scale != 1.0) {
-      boardScale = _scaleStart! * details.scale;
+      newScale = math.min(3, math.max(0.3, _scaleStart! * details.scale));
     } else {
-      var delta = (details.localFocalPoint - _offsetStart!) / boardScale;
-      boardOffset += delta;
+      var delta = (details.localFocalPoint - _offsetStart!) / transform.value.scale;
+      newOffset += delta;
       _offsetStart = details.localFocalPoint;
     }
-    setState(() {
-      boardScale = math.min(3, math.max(0.3, boardScale));
-    });
+    transform.value = BoardTransform(newOffset, newScale);
   }
 
   void _onScaleEnd(ScaleEndDetails details) {
     _scaleStart = null;
     _offsetStart = null;
-  }
-
-  List<Widget> buildMoveBorder(List<TokenPlacement> placements) {
-    return placements.map((p) {
-      return buildCell(
-        p.pos,
-        QwirkleToken.placeholder(Colors.green.withOpacity(0.5), Colors.transparent),
-      );
-    }).toList();
   }
 }

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:provider/provider.dart';
+import 'package:qwirkle_online/screens/game/painters/token_painter_mixin.dart';
 
 import '../../../models/game.dart';
 import '../../../models/token.dart';
 import '../../../widgets/reorderable/draggable_item.dart';
 import '../game_screen.dart';
-import 'token.dart';
+import '../painters/cell_painter.dart';
 
 class TokenSelector extends StatefulWidget {
   const TokenSelector();
@@ -19,16 +21,13 @@ class TokenSelector extends StatefulWidget {
 }
 
 class TokenSelectorState extends State<TokenSelector> with TickerProviderStateMixin {
-  late List<Cell> tokens;
+  late List<Cell> _localTokens;
 
   static double itemSize = 90;
   static double itemPadding = 10;
   double get leftEdge => (context.findRenderObject() as RenderBox).localToGlobal(Offset.zero).dx - 10;
 
-  bool canDrag = false;
-
   GameScreenState get gameScreen => GameScreen.of(context);
-  Game get game => gameScreen.game;
 
   @override
   void initState() {
@@ -36,26 +35,19 @@ class TokenSelectorState extends State<TokenSelector> with TickerProviderStateMi
 
     gameScreen.tokenSelector = this;
 
-    tokens = [...game.tokens.value];
-    game.tokens.addListener(updateTokens);
+    var game = Provider.of<Game>(context, listen: false);
 
-    canDrag = game.currentPlayer.value == game.playerId;
-
-    game.currentPlayer.addListener(() {
-      setState(() {
-        canDrag = game.currentPlayer.value == game.playerId;
-      });
-    });
+    _localTokens = [...game.myPlayer.tokens];
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    var w = MediaQuery.of(context).size.width;
-    if (w < 300) {
+    var size = MediaQuery.of(context).size;
+    if (size.width < 600 || size.height < 550) {
       itemSize = 50;
       itemPadding = 4;
-    } else if (w < 800) {
+    } else if (size.width < 800 || size.height < 650) {
       itemSize = 70;
       itemPadding = 6;
     } else {
@@ -64,19 +56,13 @@ class TokenSelectorState extends State<TokenSelector> with TickerProviderStateMi
     }
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-    game.tokens.removeListener(updateTokens);
-  }
-
-  void updateTokens() {
+  List<Cell> getUpdatedTokens(Game game) {
     var manager = GameScreen.of(context).reorderable;
 
-    var oldTokens = [...tokens];
-    var newTokens = [...game.tokens.value];
+    var oldTokens = [..._localTokens];
+    var newTokens = [...game.myPlayer.tokens];
 
-    var tokenCount = game.players.value.firstWhere((p) => p.id == game.playerId).tokenCount;
+    var tokenCount = game.myPlayer.tokenCount;
 
     var updatedTokens = <Cell>[];
 
@@ -104,16 +90,16 @@ class TokenSelectorState extends State<TokenSelector> with TickerProviderStateMi
       updatedTokens.removeAt(index);
     }
 
-    setState(() {
-      tokens = updatedTokens;
-    });
+    _localTokens = updatedTokens;
+    return updatedTokens;
   }
 
   void removeWidget(Token token) {
-    var index = tokens.indexOf(token);
-
-    setState(() {
-      tokens[index] = TokenPlaceholder();
+    var index = _localTokens.indexOf(token);
+    WidgetsBinding.instance!.addPostFrameCallback((timeStamp) {
+      setState(() {
+        _localTokens[index] = TokenPlaceholder();
+      });
     });
 
     // var manager = GameScreen.of(context).reorderable;
@@ -135,45 +121,66 @@ class TokenSelectorState extends State<TokenSelector> with TickerProviderStateMi
 
   @override
   Widget build(BuildContext context) {
-    if (tokens.isEmpty) return Container();
-    return Center(
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 50),
-        width: itemSize + itemPadding * 4,
-        decoration: const BoxDecoration(
-          color: Colors.black26,
-          borderRadius: BorderRadius.horizontal(left: Radius.circular(20)),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(itemPadding),
-          child: AnimatedSize(
-            vsync: this,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child: MouseRegion(
-              cursor: canDrag ? SystemMouseCursors.basic : SystemMouseCursors.forbidden,
-              child: IgnorePointer(
-                ignoring: !canDrag,
-                child: ListView(
-                  shrinkWrap: true,
-                  physics: const ClampingScrollPhysics(),
-                  children: tokens.map((token) {
-                    return Padding(
-                      padding: EdgeInsets.all(itemPadding),
-                      child: token is Token
-                          ? DraggableItem(
-                              key: token.key,
-                              value: token,
-                              placeholderBuilder: (_) => QwirkleToken.placeholder(),
-                              child: QwirkleToken(token),
-                            )
-                          : QwirkleToken.placeholder(),
-                    );
-                  }).toList(),
+    print("BUILD TOKEN SELECTOR");
+    return Selector<Game, List<Cell>>(
+      selector: (context, game) => getUpdatedTokens(game),
+      builder: (context, tokens, _) {
+        if (tokens.isEmpty) return Container();
+        return Center(
+          child: Container(
+            margin: const EdgeInsets.symmetric(vertical: 50),
+            width: itemSize + itemPadding * 4,
+            decoration: const BoxDecoration(
+              color: Colors.black26,
+              borderRadius: BorderRadius.horizontal(left: Radius.circular(20)),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(itemPadding),
+              child: AnimatedSize(
+                vsync: this,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                child: Selector<Game, bool>(
+                  selector: (context, game) => game.currentPlayerId == game.playerId,
+                  builder: (context, canDrag, _) => MouseRegion(
+                    cursor: canDrag ? SystemMouseCursors.basic : SystemMouseCursors.forbidden,
+                    child: IgnorePointer(
+                      ignoring: !canDrag,
+                      child: ListView(
+                        shrinkWrap: true,
+                        physics: const ClampingScrollPhysics(),
+                        children: tokens.map((token) {
+                          return Padding(
+                            padding: EdgeInsets.all(itemPadding),
+                            child: token is Token
+                                ? DraggableItem(
+                                    key: token.key,
+                                    value: token,
+                                    placeholderBuilder: (_) => buildCell(TokenPlaceholder()),
+                                    child: buildCell(token),
+                                  )
+                                : buildCell(token),
+                          );
+                        }).toList(),
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
           ),
+        );
+      },
+    );
+  }
+
+  Widget buildCell(Cell cell) {
+    return FittedBox(
+      child: SizedBox(
+        width: TokenPainterMixin.grid,
+        height: TokenPainterMixin.grid,
+        child: CustomPaint(
+          painter: CellPainter(cell),
         ),
       ),
     );

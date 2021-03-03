@@ -1,7 +1,6 @@
 import 'token.dart';
-import 'value_subscription.dart';
 
-class GameAction with JsonEncodable {
+class GameAction {
   String playerId;
   String action;
   dynamic? result;
@@ -19,7 +18,6 @@ class GameAction with JsonEncodable {
     return GameAction._(map["playerId"] as String, map["action"] as String, map["result"]);
   }
 
-  @override
   dynamic toJson() => {
         "playerId": playerId,
         "action": action,

@@ -3,11 +3,10 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import 'painters.dart';
-import 'value_subscription.dart';
 
 class Pos {
-  int x, y;
-  Pos(this.x, this.y);
+  final int x, y;
+  const Pos(this.x, this.y);
 
   @override
   bool operator ==(Object other) =>
@@ -22,7 +21,7 @@ class Cell {
   Cell() : key = UniqueKey();
 }
 
-class Token extends Cell with JsonEncodable {
+class Token extends Cell {
   String tag;
   CustomPainter painter;
 
@@ -49,68 +48,45 @@ class Token extends Cell with JsonEncodable {
   @override
   int get hashCode => tag.hashCode;
 
-  @override
   String toJson() => tag;
 }
 
 class TokenPlaceholder extends Cell {}
 
-class TokenPlacement with JsonEncodable {
+class TokenPlacement {
   Pos pos;
   Token token;
-  bool isAllowed;
-  TokenPlacement(this.pos, this.token, this.isAllowed);
+  TokenPlacement(this.pos, this.token);
 
   static TokenPlacement? fromMap(Map<String, dynamic>? map) {
-    return map != null
-        ? TokenPlacement(Pos(map["x"] as int, map["y"] as int), Token(map["token"] as String), map["isAllowed"] as bool)
-        : null;
+    return map != null ? TokenPlacement(Pos(map["x"] as int, map["y"] as int), Token(map["token"] as String)) : null;
   }
 
-  @override
   Map<String, dynamic> toJson() => {
         "x": pos.x,
         "y": pos.y,
         "token": token.tag,
-        "isAllowed": isAllowed,
       };
 
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is TokenPlacement &&
-          runtimeType == other.runtimeType &&
-          pos == other.pos &&
-          token == other.token &&
-          isAllowed == other.isAllowed;
+      other is TokenPlacement && runtimeType == other.runtimeType && pos == other.pos && token == other.token;
 
   @override
-  int get hashCode => pos.hashCode ^ token.hashCode ^ isAllowed.hashCode;
+  int get hashCode => pos.hashCode ^ token.hashCode;
 }
 
-class PlayerMove with JsonEncodable {
-  List<TokenPlacement> placements;
-
-  PlayerMove(this.placements);
-
-  static PlayerMove? fromList(List<dynamic>? list) {
-    return list != null
-        ? PlayerMove(list
-            .map((d) => TokenPlacement(Pos(d["x"] as int, d["y"] as int), Token(d["token"] as String), true))
-            .toList())
-        : null;
+extension PlayerMove on List<TokenPlacement> {
+  static List<TokenPlacement> fromList(List<dynamic>? list) {
+    return (list ?? [])
+        .map((d) => TokenPlacement(Pos(d["x"] as int, d["y"] as int), Token(d["token"] as String)))
+        .toList();
   }
 
-  @override
-  List<dynamic> toJson() => placements
-      .map((p) => {
-            "x": p.pos.x,
-            "y": p.pos.y,
-            "token": p.token.tag,
-          })
-      .toList();
-
-  static PlayerMove join(PlayerMove? move, TokenPlacement placement) {
-    return PlayerMove([...move?.placements ?? [], placement]);
-  }
+  List<dynamic> toJson() => map((p) => {
+        "x": p.pos.x,
+        "y": p.pos.y,
+        "token": p.token.tag,
+      }).toList();
 }

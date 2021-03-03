@@ -23,8 +23,12 @@ class HomeScreen extends StatelessWidget {
               cursor: SystemMouseCursors.click,
               child: GestureDetector(
                 onTap: () async {
-                  Game game = await GameService.createGame();
-                  QwirkleApp.of(context).open(GameRoutePath.join(game));
+                  try {
+                    Game game = await GameService.createGame();
+                    QwirkleApp.of(context).open(GameRoutePath.join(game));
+                  } catch (e) {
+                    print(e);
+                  }
                 },
                 child: _asToken(
                   const Center(
