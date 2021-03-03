@@ -40,7 +40,6 @@ class QwirkleBoardState extends State<QwirkleBoard> {
 
   bool checkDropPosition(Offset offset, Token token) {
     var scenePos = toScenePos(offset);
-    print(scenePos.dx);
     var pos = Pos(scenePos.dx.round(), scenePos.dy.round());
 
     var game = Provider.of<Game>(context, listen: false);

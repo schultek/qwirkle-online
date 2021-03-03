@@ -19,7 +19,6 @@ class _PlayAreaState extends State<PlayArea> {
 
   @override
   Widget build(BuildContext context) {
-    print("BUILD PLAY AREA");
     return Stack(
       children: [
         const Positioned.fill(child: QwirkleBoard()),

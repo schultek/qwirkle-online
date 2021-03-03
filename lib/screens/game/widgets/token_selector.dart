@@ -121,7 +121,6 @@ class TokenSelectorState extends State<TokenSelector> with TickerProviderStateMi
 
   @override
   Widget build(BuildContext context) {
-    print("BUILD TOKEN SELECTOR");
     return Selector<Game, List<Cell>>(
       selector: (context, game) => getUpdatedTokens(game),
       builder: (context, tokens, _) {

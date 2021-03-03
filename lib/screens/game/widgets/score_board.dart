@@ -17,7 +17,6 @@ class _ScoreBoardState extends State<ScoreBoard> {
 
   @override
   Widget build(BuildContext context) {
-    print("BUILD SCORE BOARD");
     return AnimatedPositioned(
       left: persistentScoreBoard || scoreBoardHovered ? 0 : -140,
       top: 0,
