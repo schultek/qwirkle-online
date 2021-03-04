@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../models/game.dart';
 import '../../widgets/reorderable/draggable_manager.dart';
 import 'widgets/board.dart';
+import 'widgets/finished_area.dart';
 import 'widgets/play_area.dart';
 import 'widgets/token_selector.dart';
 import 'widgets/waiting_area.dart';
@@ -54,7 +55,9 @@ class GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                     ? const WaitingArea()
                     : state == "running"
                         ? PlayArea()
-                        : Container();
+                        : state == "finished"
+                            ? FinishedArea()
+                            : Container();
               },
             ),
           ),

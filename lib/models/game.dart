@@ -46,6 +46,8 @@ class Player {
 }
 
 class Game with ChangeNotifier {
+  static const int InitialTokenCount = 5;
+
   String id;
   String playerId;
 
@@ -59,7 +61,7 @@ class Game with ChangeNotifier {
   Map<String, Player> players = {};
   Map<Pos, Cell> board = {};
 
-  String? currentPlayerId;
+  String? currentPlayerId, winningPlayerId;
   TokenPlacement? currentPlacement;
   List<TokenPlacement> currentMove = [];
 
@@ -109,6 +111,11 @@ class Game with ChangeNotifier {
       notifyListeners();
     });
 
+    gameRef.child("winningPlayerId").onValue.listen((e) {
+      winningPlayerId = e.snapshot.val() as String?;
+      notifyListeners();
+    });
+
     var creatorUserId = (await gameRef.child("creatorUserId").once("value")).snapshot.val();
 
     // dbSubscriptions.add(gameRef.child("actions").onChildAdded.listen((event) {
@@ -135,7 +142,7 @@ class Game with ChangeNotifier {
             await gameRef.child("players/${action.playerId}").set({
               "nickname": action.nickname,
               "points": 0,
-              "tokenCount": 5,
+              "tokenCount": InitialTokenCount,
               "color": Token.randomTag()[0],
             });
             result = true;
@@ -183,7 +190,7 @@ class Game with ChangeNotifier {
             Tuple2<double, int> score = calculateScore(currentMove, board);
 
             var tokens = [...player.tokens];
-            var newTokenCount = player.tokenCount - score.item2;
+            var newTokenCount = max(0, player.tokenCount - score.item2);
 
             while (tokens.length < newTokenCount) {
               tokens.add(Token(Token.randomTag()));
@@ -198,6 +205,8 @@ class Game with ChangeNotifier {
 
             if (newTokenCount == 0) {
               gameRef.child("messages").push("${player.nickname} gewinnt!");
+              gameRef.child("state").set("finished");
+              gameRef.child("winningPlayerId").set(player.id);
             }
 
             await Future.wait([
@@ -263,7 +272,7 @@ class Game with ChangeNotifier {
     if (!isGameMaster) return;
 
     for (var id in players.keys) {
-      await gameRef.child("players/$id/tokens").set(List.generate(5, (index) => Token.randomTag()));
+      await gameRef.child("players/$id/tokens").set(List.generate(InitialTokenCount, (index) => Token.randomTag()));
     }
 
     var randomPlayerId = players.keys.toList()[Random().nextInt(players.length)];

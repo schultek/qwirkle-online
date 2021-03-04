@@ -21,7 +21,7 @@ class _PlayAreaState extends State<PlayArea> {
   Widget build(BuildContext context) {
     return Stack(
       children: [
-        const Positioned.fill(child: QwirkleBoard()),
+        Positioned.fill(child: QwirkleBoard(QwirkleBoard.globalKey)),
         const Positioned(
           right: 0,
           top: 0,
@@ -47,7 +47,7 @@ class _PlayAreaState extends State<PlayArea> {
               child: actionButton(
                 onPressed: () {
                   var game = Provider.of<Game>(context, listen: false);
-                  game.requestAction(GameAction.replaceTokens(game.playerId));
+                  game.requestAction(GameAction.replaceTokens(game.playerId), sendDuplicate: true);
                 },
                 text: "Ersetze alle Steine",
                 color: Colors.orange,

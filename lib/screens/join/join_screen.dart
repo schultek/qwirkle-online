@@ -23,7 +23,7 @@ class _JoinScreenState extends State<JoinScreen> {
 
     widget.game.hasJoined().then((hasJoined) {
       if (hasJoined) {
-        QwirkleApp.of(context).open(GameRoutePath.game(widget.game));
+        QwirkleApp.of(context).replace(GameRoutePath.game(widget.game));
       }
     });
   }
@@ -55,7 +55,7 @@ class _JoinScreenState extends State<JoinScreen> {
               bool allowJoin =
                   await widget.game.requestAction(JoinAction(widget.game.playerId, _nickname!), sendDuplicate: true);
               if (allowJoin) {
-                QwirkleApp.of(context).open(GameRoutePath.game(widget.game));
+                QwirkleApp.of(context).replace(GameRoutePath.game(widget.game));
               } else {
                 print("NOT ALLOWED");
               }

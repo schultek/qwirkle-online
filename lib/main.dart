@@ -47,6 +47,11 @@ class _QwirkleAppState extends State<QwirkleApp> {
     _routerDelegate.setNewRoutePath(path);
   }
 
+  void replace(GameRoutePath path) {
+    _routerDelegate.popRoute();
+    _routerDelegate.setNewRoutePath(path);
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(

@@ -16,7 +16,9 @@ import '../painters/placement_painter.dart';
 import '../painters/token_painter_mixin.dart';
 
 class QwirkleBoard extends StatefulWidget {
-  const QwirkleBoard();
+  static Key globalKey = GlobalKey();
+
+  const QwirkleBoard(Key key) : super(key: key);
 
   @override
   QwirkleBoardState createState() => QwirkleBoardState();

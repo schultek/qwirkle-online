@@ -33,6 +33,9 @@
         "currentMove": {
           ".validate": true
         },
+        "winningPlayerId": {
+          ".validate": true
+        },
         "actions": {
           ".write": true,
           ".validate": true,
