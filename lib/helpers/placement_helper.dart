@@ -8,11 +8,16 @@ bool isValidPlacement(PlacementAction placement, Map<Pos, Cell> cells, List<Toke
   var pos = placement.pos;
   bool? verticalSameColor, horizontalSameColor;
   bool hasRow = false, hasColumn = false;
+  Set<String> line = {};
 
   bool isNextValid(Token next, bool sameColor) {
     if (sameColor) {
+      if (line.contains(next.symbol)) return false;
+      line.add(next.symbol);
       return next.color == token.color && next.symbol != token.symbol;
     } else {
+      if (line.contains(next.color)) return false;
+      line.add(next.color);
       return next.color != token.color && next.symbol == token.symbol;
     }
   }
@@ -44,6 +49,8 @@ bool isValidPlacement(PlacementAction placement, Map<Pos, Cell> cells, List<Toke
       hasColumn = true;
     }
   }
+
+  line = {};
 
   pos = placement.pos;
 
