@@ -12,7 +12,7 @@ class GameRouteInformationParser extends RouteInformationParser<GameRoutePath> {
       return GameRoutePath.game(await GameService.getGame(gameId));
     } else if (uri.pathSegments.length >= 2 && uri.pathSegments[0] == 'join') {
       var gameId = uri.pathSegments[1];
-      return GameRoutePath.join(await GameService.getGame(gameId));
+      return GameRoutePath.game(await GameService.getGame(gameId));
     } else {
       return GameRoutePath.home();
     }

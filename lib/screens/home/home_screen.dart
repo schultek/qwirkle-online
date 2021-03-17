@@ -25,7 +25,7 @@ class HomeScreen extends StatelessWidget {
                 onTap: () async {
                   try {
                     Game game = await GameService.createGame();
-                    QwirkleApp.of(context).open(GameRoutePath.join(game));
+                    QwirkleApp.of(context).open(GameRoutePath.game(game));
                   } catch (e) {
                     print(e);
                   }
@@ -51,7 +51,7 @@ class HomeScreen extends StatelessWidget {
                 child: TextField(
                   onSubmitted: (String id) async {
                     var game = await GameService.getGame(id);
-                    QwirkleApp.of(context).open(GameRoutePath.join(game));
+                    QwirkleApp.of(context).open(GameRoutePath.game(game));
                   },
                   decoration: InputDecoration(
                     filled: true,

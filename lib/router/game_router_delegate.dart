@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../screens/game/game_screen.dart';
 import '../screens/home/home_screen.dart';
-import '../screens/join/join_screen.dart';
 import '../screens/loading/loading_screen.dart';
 import 'game_route_path.dart';
 
@@ -50,13 +49,8 @@ class GameRouterDelegate extends RouterDelegate<GameRoutePath>
           )
         else if (currentRoute!.isGame)
           FadeAnimationPage(
-            key: const ValueKey("signin"),
+            key: const ValueKey("game"),
             child: GameScreen(currentRoute!.game!),
-          )
-        else if (currentRoute!.isJoin)
-          FadeAnimationPage(
-            key: const ValueKey("join"),
-            child: JoinScreen(currentRoute!.game!),
           )
       ],
       onPopPage: (route, result) {
