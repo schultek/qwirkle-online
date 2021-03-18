@@ -321,7 +321,7 @@ class Game with ChangeNotifier {
   }
 
   Future<void> generateTokenSet() async {
-    var colors = ["y"]; //, "o", "r", "p", "b", "g"];
+    var colors = ["y", "o", "r", "p", "b", "g"];
     var symbols = ["1", "2", "3", "4", "5", "6"];
     List<String> tokens = [];
     for (var c in colors) {

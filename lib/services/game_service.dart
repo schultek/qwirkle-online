@@ -1,9 +1,8 @@
 import 'dart:async';
+import 'dart:math';
 
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:firebase/firebase.dart';
-// ignore: import_of_legacy_library_into_null_safe
-import 'package:shortid/shortid.dart';
 
 import '../models/game.dart';
 import 'auth_service.dart';
@@ -18,7 +17,8 @@ class GameService {
   }
 
   static Future<Game> createGame() async {
-    String gameId = shortid.generate();
+    String gameId = "000000${Random().nextInt(100000)}";
+    gameId = gameId.substring(gameId.length - 6);
 
     removeOldGames();
 
