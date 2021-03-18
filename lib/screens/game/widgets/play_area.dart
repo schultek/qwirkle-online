@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:ui';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 // ignore: import_of_legacy_library_into_null_safe
@@ -8,6 +10,7 @@ import 'package:tuple/tuple.dart';
 import '../../../models/game.dart';
 import '../../../models/game_action.dart';
 import 'board.dart';
+import 'firework.dart';
 import 'score_board.dart';
 import 'token_selector.dart';
 
@@ -18,6 +21,88 @@ class PlayArea extends StatefulWidget {
 
 class _PlayAreaState extends State<PlayArea> {
   bool showReplaceAllButton = false;
+  AudioPlayer audioPlayer = AudioPlayer();
+  static const String soundEffectUrl = "https://assets.mixkit.co/sfx/preview/mixkit-casino-bling-achievement-2067.mp3";
+
+  late StreamSubscription<Tuple2<String, String>> cmdSubscription;
+  late StreamSubscription<Tuple2<String, String>> msgSubscription;
+
+  @override
+  void initState() {
+    audioPlayer.setUrl(soundEffectUrl);
+    cmdSubscription = Provider.of<Game>(context, listen: false)
+        .messages
+        .where((event) => event.item2.startsWith(":"))
+        .listen((event) {
+      if (event.item2.startsWith(":qwirkle")) {
+        var entry = OverlayEntry(
+          builder: (ctx) => Firework(
+            MediaQuery.of(context).size,
+            loop: false,
+            offset: Offset(
+              MediaQuery.of(context).size.width / 2 - 50,
+              MediaQuery.of(context).size.height / 2 - 50,
+            ),
+          ),
+        );
+        Overlay.of(context)!.insert(entry);
+        audioPlayer.play(soundEffectUrl, volume: 0.5);
+        Future.delayed(const Duration(seconds: 1), () {
+          entry.remove();
+        });
+      }
+    });
+
+    msgSubscription = Provider.of<Game>(context, listen: false)
+        .messages
+        .where((event) => !event.item2.startsWith(":"))
+        .listen((event) {
+      var entry = OverlayEntry(
+        builder: (ctx) => Positioned(
+          top: 70,
+          left: 0,
+          right: 0,
+          child: Center(
+            child: TweenAnimationBuilder<double>(
+              duration: const Duration(seconds: 4),
+              tween: Tween(begin: 0, end: 1),
+              builder: (context, a, _) {
+                return Opacity(
+                  opacity: a <= 0.1
+                      ? a * 5
+                      : a >= 0.9
+                          ? 1 - (a - 0.9) * 10
+                          : 1,
+                  child: Text(
+                    event.item2,
+                    style: const TextStyle(
+                      color: Colors.green,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      decoration: TextDecoration.none,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      );
+      Overlay.of(context)!.insert(entry);
+      Future.delayed(const Duration(seconds: 4), () {
+        entry.remove();
+      });
+    });
+
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    cmdSubscription.cancel();
+    msgSubscription.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -71,53 +156,20 @@ class _PlayAreaState extends State<PlayArea> {
           ),
         ),
         Selector<Game, bool>(
-            selector: (context, game) => game.currentPlayerId == game.playerId,
-            builder: (context, isCurrentPlayer, _) {
-              if (isCurrentPlayer) {
-                return Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 50,
-                  child: Center(child: buildPlayerActions()),
-                );
-              } else {
-                return Container();
-              }
-            }),
-        Positioned(
-          top: 70,
-          left: 0,
-          right: 0,
-          child: Center(
-            child: StreamBuilder<Tuple2<String, String>>(
-              stream: Provider.of<Game>(context, listen: false).messages,
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  return TweenAnimationBuilder<double>(
-                    key: ValueKey(snapshot.data!.item1),
-                    duration: const Duration(seconds: 4),
-                    tween: Tween(begin: 0, end: 1),
-                    builder: (context, a, _) {
-                      return Opacity(
-                        opacity: a <= 0.1
-                            ? a * 5
-                            : a >= 0.9
-                                ? 1 - (a - 0.9) * 10
-                                : 1,
-                        child: Text(
-                          snapshot.data!.item2,
-                          style: const TextStyle(color: Colors.green, fontSize: 14, fontWeight: FontWeight.bold),
-                        ),
-                      );
-                    },
-                  );
-                } else {
-                  return Container();
-                }
-              },
-            ),
-          ),
-        )
+          selector: (context, game) => game.currentPlayerId == game.playerId,
+          builder: (context, isCurrentPlayer, _) {
+            if (isCurrentPlayer) {
+              return Positioned(
+                left: 0,
+                right: 0,
+                bottom: 50,
+                child: Center(child: buildPlayerActions()),
+              );
+            } else {
+              return Container();
+            }
+          },
+        ),
       ],
     );
   }

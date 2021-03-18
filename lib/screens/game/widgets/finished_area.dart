@@ -1,12 +1,11 @@
-import 'dart:math';
-
+// ignore: import_of_legacy_library_into_null_safe
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
-import 'package:pimp_my_button/pimp_my_button.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/game.dart';
 import 'board.dart';
+import 'firework.dart';
 import 'score_board.dart';
 
 class FinishedArea extends StatefulWidget {
@@ -23,9 +22,6 @@ class _FinishedAreaState extends State<FinishedArea> {
   void initState() {
     super.initState();
     audioPlayer.play(soundEffectUrl, volume: 0.5);
-    audioPlayer.onPlayerCompletion.listen((event) {
-      audioPlayer.play(soundEffectUrl, volume: 0.5);
-    });
   }
 
   @override
@@ -57,69 +53,5 @@ class _FinishedAreaState extends State<FinishedArea> {
     } else {
       return Container();
     }
-  }
-}
-
-class Firework extends StatefulWidget {
-  final Size size;
-  const Firework(this.size);
-
-  @override
-  _FireworkState createState() => _FireworkState();
-}
-
-class _FireworkState extends State<Firework> {
-  late double x, y;
-  Random random = Random();
-  bool stop = false;
-
-  @override
-  void initState() {
-    super.initState();
-    updatePosition();
-  }
-
-  void updatePosition() {
-    x = random.nextInt(widget.size.width.toInt()).toDouble();
-    y = random.nextInt(widget.size.height.toInt()).toDouble();
-  }
-
-  void play(AnimationController controller) {
-    var d = random.nextInt(2000);
-
-    Future.delayed(Duration(milliseconds: d), () {
-      if (!stop) {
-        controller.forward(from: 0).then((_) async {
-          updatePosition();
-          setState(() {});
-          play(controller);
-        });
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    stop = true;
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: x,
-      top: y,
-      child: PimpedButton(
-        particle: DemoParticle(),
-        duration: Duration(seconds: 1),
-        pimpedWidgetBuilder: (context, controller) {
-          play(controller);
-          return Container(
-            width: 100,
-            height: 100,
-          );
-        },
-      ),
-    );
   }
 }

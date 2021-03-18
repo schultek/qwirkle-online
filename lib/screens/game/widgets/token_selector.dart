@@ -74,6 +74,8 @@ class TokenSelectorState extends State<TokenSelector> with TickerProviderStateMi
       } else if (newTokens.contains(token)) {
         updatedTokens.add(token);
         newTokens.remove(token);
+      } else {
+        updatedTokens.add(TokenPlaceholder());
       }
     }
 
@@ -89,36 +91,13 @@ class TokenSelectorState extends State<TokenSelector> with TickerProviderStateMi
 
     while (updatedTokens.length > tokenCount) {
       var index = updatedTokens.indexWhere((t) => t is TokenPlaceholder);
-      updatedTokens.removeAt(index);
+      if (index >= 0) {
+        updatedTokens.removeAt(index);
+      }
     }
 
     _localTokens = updatedTokens;
     return updatedTokens;
-  }
-
-  void removeWidget(Token token) {
-    var index = _localTokens.indexOf(token);
-    WidgetsBinding.instance!.addPostFrameCallback((timeStamp) {
-      setState(() {
-        _localTokens[index] = TokenPlaceholder();
-      });
-    });
-
-    // var manager = GameScreen.of(context).reorderable;
-    //
-    // for (int i = 0; i < tokens.length; i++) {
-    //   if (i == index) continue;
-    //   var sign = i < index ? -1 : 1;
-    //   manager.translateItemY(tokens[i].key, sign * (itemSize / 2 + itemPadding));
-    // }
-    //
-    // setState(() {
-    //   tokens.remove(token);
-    // });
-
-    // Future.delayed(const Duration(milliseconds: 100), () {
-    //   addToken(index, Token(Token.randomTag()));
-    // });
   }
 
   @override

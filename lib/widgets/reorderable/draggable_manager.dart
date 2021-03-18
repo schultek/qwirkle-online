@@ -234,7 +234,6 @@ class DraggableManager with Drag {
       _finalAnimation = null;
 
       if (_isDropAccepted) {
-        tokenSelector!.removeWidget(dropValue);
         await board!.onDrop(_dragOffset!, dropValue);
       }
 

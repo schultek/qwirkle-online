@@ -82,7 +82,12 @@ class Game with ChangeNotifier {
   List<StreamSubscription> dbSubscriptions = [];
 
   Future<void> _setup() async {
-    messages = gameRef.child("messages").onChildAdded.map((e) => Tuple2(e.snapshot.key, e.snapshot.val() as String));
+    var existingMessages = await gameRef.child("messages").once("value").then((value) => value.snapshot.numChildren());
+    messages = gameRef
+        .child("messages")
+        .onChildAdded
+        .skip(existingMessages)
+        .map((e) => Tuple2(e.snapshot.key, e.snapshot.val() as String));
 
     gameRef.child("state").onValue.listen((e) {
       state = e.snapshot.val() as String;
@@ -105,7 +110,7 @@ class Game with ChangeNotifier {
     });
 
     gameRef.child("availableTokens").onValue.listen((e) {
-      availableTokens = (e.snapshot.val() as List).map((d) => d as String).toList();
+      availableTokens = (e.snapshot.val() as List? ?? []).map((d) => d as String).toList();
       notifyListeners();
     });
 
@@ -201,15 +206,11 @@ class Game with ChangeNotifier {
             var tokens = [...player.tokens];
             var newTokenCount = mode == "hard" ? max(0, player.tokenCount - score.item2) : player.tokenCount;
 
-            while (tokens.length < newTokenCount) {
+            while (tokens.length < newTokenCount && availableTokens.isNotEmpty) {
               tokens.add(Token(availableTokens.removeAt(rand.nextInt(availableTokens.length))));
 
-              if (availableTokens.isEmpty) {
-                if (mode != "normal") {
-                  await generateTokenSet();
-                } else {
-                  break;
-                }
+              if (availableTokens.isEmpty && mode != "normal") {
+                await generateTokenSet();
               }
             }
 
@@ -222,11 +223,13 @@ class Game with ChangeNotifier {
 
             player.points += score.item1;
 
-            if (newTokenCount == 0 || availableTokens.isEmpty) {
+            if (newTokenCount == 0 || tokens.isEmpty) {
               var winner = players.values.reduce((a, b) => a.points > b.points ? a : b);
               gameRef.child("messages").push("${winner.nickname} gewinnt!");
               gameRef.child("state").set("finished");
               gameRef.child("winningPlayerId").set(winner.id);
+            } else if (score.item2 > 0) {
+              gameRef.child("messages").push(":qwirkle=${score.item2}");
             }
 
             await Future.wait([
@@ -244,8 +247,17 @@ class Game with ChangeNotifier {
           }
         } else if (action.action == "replace-tokens") {
           var player = players[action.playerId]!;
-          var newTokens = List.generate(
-              player.tokenCount, (index) => Token(availableTokens.removeAt(rand.nextInt(availableTokens.length))));
+
+          availableTokens.addAll(player.tokens.map((t) => t.tag));
+
+          List<Token> newTokens = [];
+          while (newTokens.length < player.tokenCount && availableTokens.isNotEmpty) {
+            newTokens.add(Token(availableTokens.removeAt(rand.nextInt(availableTokens.length))));
+
+            if (availableTokens.isEmpty && mode != "normal") {
+              await generateTokenSet();
+            }
+          }
 
           var playerIds = players.keys.toList()..sort();
           var playerIndex = playerIds.indexOf(currentPlayerId!);
@@ -309,7 +321,7 @@ class Game with ChangeNotifier {
   }
 
   Future<void> generateTokenSet() async {
-    var colors = ["y", "o", "r", "p", "b", "g"];
+    var colors = ["y"]; //, "o", "r", "p", "b", "g"];
     var symbols = ["1", "2", "3", "4", "5", "6"];
     List<String> tokens = [];
     for (var c in colors) {
