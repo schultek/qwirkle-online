@@ -15,6 +15,9 @@
         "state": {
           ".validate": true
         },
+        "mode": {
+          ".validate": true
+        },
         "players": {
           ".validate": true
         },
@@ -22,6 +25,9 @@
           ".validate": true
         },
         "board": {
+          ".validate": true
+        },
+        "availableTokens": {
           ".validate": true
         },
         "currentPlayerId": {

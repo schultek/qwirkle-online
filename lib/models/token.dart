@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 
 import 'painters.dart';
@@ -34,11 +32,6 @@ class Token extends Cell {
 
   static List<Token> fromList(List<dynamic>? data) {
     return data?.map((d) => Token(d as String)).toList() ?? [];
-  }
-
-  static String randomTag() {
-    var r = ["y", "o", "r", "p", "b", "g"][Random().nextInt(6)];
-    return "$r${Random().nextInt(6) + 1}";
   }
 
   @override

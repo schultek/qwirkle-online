@@ -1,6 +1,7 @@
 // ignore: import_of_legacy_library_into_null_safe
 import 'package:clipboard/clipboard.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 
 import '../../../models/game.dart';
@@ -76,6 +77,26 @@ class WaitingArea extends StatelessWidget {
           ),
           const SizedBox(height: 40),
           if (Provider.of<Game>(context, listen: false).isGameMaster)
+            const Text(
+              "Select a mode:",
+              style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+            ),
+          if (Provider.of<Game>(context, listen: false).isGameMaster)
+            Selector<Game, String>(
+              selector: (context, game) => game.mode,
+              builder: (context, mode, _) => Padding(
+                padding: const EdgeInsets.only(bottom: 30),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    _modeButton(context, "Normal", "normal", mode),
+                    _modeButton(context, "Infinity", "infinity", mode),
+                    _modeButton(context, "Hard", "hard", mode),
+                  ],
+                ),
+              ),
+            ),
+          if (Provider.of<Game>(context, listen: false).isGameMaster)
             TextButton(
               onPressed: () => Provider.of<Game>(context, listen: false).startGame(),
               style: ButtonStyle(
@@ -93,6 +114,41 @@ class WaitingArea extends StatelessWidget {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Widget _modeButton(BuildContext context, String label, String mode, String currentMode) {
+    return Padding(
+      padding: const EdgeInsets.all(10),
+      child: MouseRegion(
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: () async {
+            Provider.of<Game>(context, listen: false).gameRef.child("mode").set(mode);
+          },
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              color: Colors.black,
+              borderRadius: BorderRadius.circular(10),
+              border: mode == currentMode ? Border.all(color: Colors.green) : null,
+            ),
+            padding: const EdgeInsets.all(10),
+            child: Center(
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 20,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

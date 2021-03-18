@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 // ignore: import_of_legacy_library_into_null_safe
@@ -27,6 +29,19 @@ class _PlayAreaState extends State<PlayArea> {
           top: 0,
           bottom: 0,
           child: TokenSelector(),
+        ),
+        Selector<Game, int?>(
+          builder: (context, tokensLeft, _) => tokensLeft != null
+              ? Positioned(
+                  top: 20,
+                  right: 20,
+                  child: Text(
+                    "$tokensLeft",
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                )
+              : Container(),
+          selector: (context, game) => game.mode == "normal" ? game.availableTokens.length : null,
         ),
         const ScoreBoard(),
         Positioned(
@@ -108,19 +123,25 @@ class _PlayAreaState extends State<PlayArea> {
   }
 
   Widget buildPlayerHint() {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(40),
-        border: Border.all(color: Colors.green),
-        color: Colors.black12,
-      ),
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Selector<Game, String>(
-        selector: (context, game) =>
-            game.currentPlayerId == game.playerId ? "Du bist" : "${game.currentPlayer!.nickname} ist",
-        builder: (context, playerText, _) => Text(
-          "$playerText am Zug",
-          style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(40),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+        child: Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(40),
+            border: Border.all(color: Colors.green),
+            color: Colors.black12,
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+          child: Selector<Game, String>(
+            selector: (context, game) =>
+                game.currentPlayerId == game.playerId ? "Du bist" : "${game.currentPlayer!.nickname} ist",
+            builder: (context, playerText, _) => Text(
+              "$playerText am Zug",
+              style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+            ),
+          ),
         ),
       ),
     );

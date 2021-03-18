@@ -51,6 +51,7 @@ class _QwirkleAppState extends State<QwirkleApp> {
   Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'Qwirkle Online',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(),
       routerDelegate: _routerDelegate,
       routeInformationParser: _routeInformationParser,

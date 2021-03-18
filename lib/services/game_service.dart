@@ -31,6 +31,7 @@ class GameService {
       "players": {},
       "lastHeartbeat": ServerValue.TIMESTAMP,
       "board": {},
+      "mode": "normal",
     });
 
     return getGame(gameId);

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
@@ -133,34 +135,40 @@ class TokenSelectorState extends State<TokenSelector> with TickerProviderStateMi
               color: Colors.black26,
               borderRadius: BorderRadius.horizontal(left: Radius.circular(20)),
             ),
-            child: Padding(
-              padding: EdgeInsets.all(itemPadding),
-              child: AnimatedSize(
-                vsync: this,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-                child: Selector<Game, bool>(
-                  selector: (context, game) => game.currentPlayerId == game.playerId,
-                  builder: (context, canDrag, _) => MouseRegion(
-                    cursor: canDrag ? SystemMouseCursors.basic : SystemMouseCursors.forbidden,
-                    child: IgnorePointer(
-                      ignoring: !canDrag,
-                      child: ListView(
-                        shrinkWrap: true,
-                        physics: const ClampingScrollPhysics(),
-                        children: tokens.map((token) {
-                          return Padding(
-                            padding: EdgeInsets.all(itemPadding),
-                            child: token is Token
-                                ? DraggableItem(
-                                    key: token.key,
-                                    value: token,
-                                    placeholderBuilder: (_) => buildCell(TokenPlaceholder()),
-                                    child: buildCell(token),
-                                  )
-                                : buildCell(token),
-                          );
-                        }).toList(),
+            child: ClipRRect(
+              borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Padding(
+                  padding: EdgeInsets.all(itemPadding),
+                  child: AnimatedSize(
+                    vsync: this,
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    child: Selector<Game, bool>(
+                      selector: (context, game) => game.currentPlayerId == game.playerId,
+                      builder: (context, canDrag, _) => MouseRegion(
+                        cursor: canDrag ? SystemMouseCursors.basic : SystemMouseCursors.forbidden,
+                        child: IgnorePointer(
+                          ignoring: !canDrag,
+                          child: ListView(
+                            shrinkWrap: true,
+                            physics: const ClampingScrollPhysics(),
+                            children: tokens.map((token) {
+                              return Padding(
+                                padding: EdgeInsets.all(itemPadding),
+                                child: token is Token
+                                    ? DraggableItem(
+                                        key: token.key,
+                                        value: token,
+                                        placeholderBuilder: (_) => buildCell(TokenPlaceholder()),
+                                        child: buildCell(token),
+                                      )
+                                    : buildCell(token),
+                              );
+                            }).toList(),
+                          ),
+                        ),
                       ),
                     ),
                   ),

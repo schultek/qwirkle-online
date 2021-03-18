@@ -47,6 +47,7 @@ class Player {
 
 class Game with ChangeNotifier {
   static const int InitialTokenCount = 5;
+  final Random rand = Random();
 
   String id;
   String playerId;
@@ -58,8 +59,10 @@ class Game with ChangeNotifier {
   bool isGameMaster = false;
 
   String state = "waiting";
+  String mode = "normal";
   Map<String, Player> players = {};
   Map<Pos, Cell> board = {};
+  List<String> availableTokens = [];
 
   String? currentPlayerId, winningPlayerId;
   TokenPlacement? currentPlacement;
@@ -86,6 +89,11 @@ class Game with ChangeNotifier {
       notifyListeners();
     });
 
+    gameRef.child("mode").onValue.listen((e) {
+      mode = e.snapshot.val() as String;
+      notifyListeners();
+    });
+
     gameRef.child("players").onValue.listen((e) {
       players = Player.fromIdMap(e.snapshot.val() as Map<String, dynamic>);
       notifyListeners();
@@ -93,6 +101,11 @@ class Game with ChangeNotifier {
 
     gameRef.child("board").onValue.listen((e) {
       board = Board.fromMap(e.snapshot.val() as Map<String, dynamic>);
+      notifyListeners();
+    });
+
+    gameRef.child("availableTokens").onValue.listen((e) {
+      availableTokens = (e.snapshot.val() as List).map((d) => d as String).toList();
       notifyListeners();
     });
 
@@ -118,10 +131,6 @@ class Game with ChangeNotifier {
 
     var creatorUserId = (await gameRef.child("creatorUserId").once("value")).snapshot.val();
 
-    // dbSubscriptions.add(gameRef.child("actions").onChildAdded.listen((event) {
-    //   lastAction = GameAction.fromMap(event.snapshot.val() as Map<String, dynamic>);
-    // }));
-
     isGameMaster = creatorUserId == playerId;
     if (isGameMaster) {
       dbSubscriptions.add(gameRef.child("actions").onChildAdded.listen((event) async {
@@ -143,7 +152,7 @@ class Game with ChangeNotifier {
               "nickname": action.nickname,
               "points": 0,
               "tokenCount": InitialTokenCount,
-              "color": Token.randomTag()[0],
+              "color": ["y", "o", "r", "p", "b", "g"][rand.nextInt(6)],
             });
             result = true;
           } else {
@@ -190,10 +199,18 @@ class Game with ChangeNotifier {
             Tuple2<double, int> score = calculateScore(currentMove, board);
 
             var tokens = [...player.tokens];
-            var newTokenCount = max(0, player.tokenCount - score.item2);
+            var newTokenCount = mode == "hard" ? max(0, player.tokenCount - score.item2) : player.tokenCount;
 
             while (tokens.length < newTokenCount) {
-              tokens.add(Token(Token.randomTag()));
+              tokens.add(Token(availableTokens.removeAt(rand.nextInt(availableTokens.length))));
+
+              if (availableTokens.isEmpty) {
+                if (mode != "normal") {
+                  await generateTokenSet();
+                } else {
+                  break;
+                }
+              }
             }
 
             var playerIds = players.keys.toList()..sort();
@@ -203,27 +220,32 @@ class Game with ChangeNotifier {
 
             gameRef.child("messages").push("+${score.item1} Punkte für ${player.nickname}");
 
-            if (newTokenCount == 0) {
-              gameRef.child("messages").push("${player.nickname} gewinnt!");
+            player.points += score.item1;
+
+            if (newTokenCount == 0 || availableTokens.isEmpty) {
+              var winner = players.values.reduce((a, b) => a.points > b.points ? a : b);
+              gameRef.child("messages").push("${winner.nickname} gewinnt!");
               gameRef.child("state").set("finished");
-              gameRef.child("winningPlayerId").set(player.id);
+              gameRef.child("winningPlayerId").set(winner.id);
             }
 
             await Future.wait([
               gameRef.child("currentPlacement").set(null),
               gameRef.child("currentMove").set(null),
+              gameRef.child("availableTokens").set(availableTokens),
             ]);
 
             await gameRef.child("currentPlayerId").set(nextPlayerId);
             await gameRef.child("players/${action.playerId}/tokens").set(tokens.toJson());
-            await gameRef.child("players/${action.playerId}/points").set(player.points + score.item1);
+            await gameRef.child("players/${action.playerId}/points").set(player.points);
             await gameRef.child("players/${action.playerId}/tokenCount").set(newTokenCount);
           } else {
             result = false;
           }
         } else if (action.action == "replace-tokens") {
           var player = players[action.playerId]!;
-          var newTokens = List.generate(player.tokenCount, (index) => Token(Token.randomTag()));
+          var newTokens = List.generate(
+              player.tokenCount, (index) => Token(availableTokens.removeAt(rand.nextInt(availableTokens.length))));
 
           var playerIds = players.keys.toList()..sort();
           var playerIndex = playerIds.indexOf(currentPlayerId!);
@@ -233,6 +255,7 @@ class Game with ChangeNotifier {
           await Future.wait([
             gameRef.child("currentPlacement").set(null),
             gameRef.child("currentMove").set(null),
+            gameRef.child("availableTokens").set(availableTokens),
           ]);
 
           await gameRef.child("currentPlayerId").set(nextPlayerId);
@@ -271,13 +294,30 @@ class Game with ChangeNotifier {
   Future<void> startGame() async {
     if (!isGameMaster) return;
 
+    await generateTokenSet();
+
     for (var id in players.keys) {
-      await gameRef.child("players/$id/tokens").set(List.generate(InitialTokenCount, (index) => Token.randomTag()));
+      await gameRef.child("players/$id/tokens").set(
+          List.generate(InitialTokenCount, (index) => availableTokens.removeAt(rand.nextInt(availableTokens.length))));
     }
 
-    var randomPlayerId = players.keys.toList()[Random().nextInt(players.length)];
+    await gameRef.child("availableTokens").set(availableTokens);
+
+    var randomPlayerId = players.keys.toList()[rand.nextInt(players.length)];
     await gameRef.child("currentPlayerId").set(randomPlayerId);
     await gameRef.child("state").set("running");
+  }
+
+  Future<void> generateTokenSet() async {
+    var colors = ["y", "o", "r", "p", "b", "g"];
+    var symbols = ["1", "2", "3", "4", "5", "6"];
+    List<String> tokens = [];
+    for (var c in colors) {
+      for (var s in symbols) {
+        tokens.addAll(List.filled(4, "$c$s"));
+      }
+    }
+    availableTokens = tokens;
   }
 
   @override

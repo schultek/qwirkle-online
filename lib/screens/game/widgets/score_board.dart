@@ -1,3 +1,6 @@
+import 'dart:math';
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -30,41 +33,47 @@ class _ScoreBoardState extends State<ScoreBoard> {
             color: Colors.black26,
             borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),
           ),
-          child: Padding(
-            padding: const EdgeInsets.only(left: 15, top: 5, bottom: 5),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Expanded(
-                  child: Selector<Game, Iterable<Player>>(
-                    selector: (context, game) => game.players.values,
-                    builder: (context, players, _) => Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: ListTile.divideTiles(
-                              context: context,
-                              tiles: players.map((p) {
-                                return playerTile(p);
-                              }).toList(),
-                              color: Colors.white24)
-                          .toList(),
+          child: ClipRRect(
+            borderRadius: const BorderRadius.horizontal(right: Radius.circular(20)),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Padding(
+                padding: const EdgeInsets.only(left: 15, top: 5, bottom: 5),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Expanded(
+                      child: Selector<Game, Iterable<Player>>(
+                        selector: (context, game) => game.players.values,
+                        builder: (context, players, _) => Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: ListTile.divideTiles(
+                                  context: context,
+                                  tiles: players.map((p) {
+                                    return playerTile(p);
+                                  }).toList(),
+                                  color: Colors.white24)
+                              .toList(),
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      persistentScoreBoard = !persistentScoreBoard;
-                    });
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(4),
-                    child: Icon(
-                      persistentScoreBoard ? Icons.chevron_left : Icons.chevron_right,
-                      color: Colors.white38,
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          persistentScoreBoard = !persistentScoreBoard;
+                        });
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          persistentScoreBoard ? Icons.chevron_left : Icons.chevron_right,
+                          color: Colors.white38,
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -97,7 +106,7 @@ class _ScoreBoardState extends State<ScoreBoard> {
               ),
               growable: true,
             )..addAll(List.filled(
-                player.tokenCount - player.tokens.length,
+                max(0, player.tokenCount - player.tokens.length),
                 Container(
                   margin: const EdgeInsets.only(right: 4),
                   decoration: BoxDecoration(
