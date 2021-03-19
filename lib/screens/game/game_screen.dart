@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:provider/provider.dart';
 
 import '../../models/game.dart';
@@ -97,47 +98,66 @@ class GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
 
   Widget buildJoinArea(BuildContext context) {
     return TitleScreen(
-      Column(
-        children: [
-          TextField(
-            decoration: InputDecoration(
-              filled: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(10),
+      AspectRatio(
+        aspectRatio: 4,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TitleScreen.asToken(Container(), Colors.grey.shade800.withOpacity(0.1)),
+            TitleScreen.asToken(
+              Center(
+                child: TextField(
+                  decoration: InputDecoration(
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    hintText: "Nickname",
+                    hintStyle: const TextStyle(color: Colors.white),
+                  ),
+                  autofocus: true,
+                  style: const TextStyle(color: Colors.white),
+                  onChanged: (text) {
+                    _nickname = text;
+                  },
+                ),
               ),
-              hintText: "Nickname",
-              hintStyle: const TextStyle(color: Colors.white),
             ),
-            style: const TextStyle(color: Colors.white),
-            onChanged: (text) {
-              _nickname = text;
-            },
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () async {
-              if (_nickname == null) return;
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: () async {
+                  if (_nickname == null) return;
 
-              bool allowJoin =
-                  await widget.game.requestAction(JoinAction(widget.game.playerId, _nickname!), sendDuplicate: true);
-              if (allowJoin) {
-                setState(() {
-                  isJoining = false;
-                });
-              } else {
-                print("NOT ALLOWED");
-              }
-            },
-            style: ButtonStyle(
-              backgroundColor: MaterialStateProperty.all(Colors.black),
-              padding: MaterialStateProperty.all(const EdgeInsets.all(20)),
+                  bool allowJoin = await widget.game
+                      .requestAction(JoinAction(widget.game.playerId, _nickname!), sendDuplicate: true);
+                  if (allowJoin) {
+                    setState(() {
+                      isJoining = false;
+                    });
+                  } else {
+                    print("NOT ALLOWED");
+                  }
+                },
+                child: TitleScreen.asToken(
+                  const Center(
+                    child: Text(
+                      "Beitreten",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 25,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ),
             ),
-            child: const Text(
-              "Beitreten",
-              style: TextStyle(color: Colors.white),
-            ),
-          )
-        ],
+            TitleScreen.asToken(Container(), Colors.grey.shade800.withOpacity(0.1)),
+          ],
+        ),
       ),
     );
   }

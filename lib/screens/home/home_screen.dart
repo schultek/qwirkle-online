@@ -14,11 +14,13 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TitleScreen(
-      IntrinsicHeight(
+      AspectRatio(
+        aspectRatio: 4,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           mainAxisSize: MainAxisSize.min,
           children: [
+            TitleScreen.asToken(Container(), Colors.grey.shade800.withOpacity(0.1)),
             MouseRegion(
               cursor: SystemMouseCursors.click,
               child: GestureDetector(
@@ -30,7 +32,7 @@ class HomeScreen extends StatelessWidget {
                     print(e);
                   }
                 },
-                child: _asToken(
+                child: TitleScreen.asToken(
                   const Center(
                     child: Text(
                       "Neues\nSpiel",
@@ -45,8 +47,7 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
-            const SizedBox(width: 20),
-            _asToken(
+            TitleScreen.asToken(
               Center(
                 child: TextField(
                   onSubmitted: (String id) async {
@@ -65,22 +66,9 @@ class HomeScreen extends StatelessWidget {
                 ),
               ),
             ),
+            TitleScreen.asToken(Container(), Colors.grey.shade800.withOpacity(0.1)),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _asToken(Widget child) {
-    return AspectRatio(
-      aspectRatio: 1,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        padding: const EdgeInsets.all(10),
-        child: child,
       ),
     );
   }

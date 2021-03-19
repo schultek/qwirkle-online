@@ -1,11 +1,11 @@
 {
-    "name": "qwirkle_online",
-    "short_name": "qwirkle_online",
+    "name": "Qwirkle Online",
+    "short_name": "Qwirkle Online",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "The qwirkle online game.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

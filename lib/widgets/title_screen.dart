@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../screens/game/painters/logo_painter.dart';
+
 class TitleScreen extends StatelessWidget {
   final Widget child;
   const TitleScreen(this.child);
@@ -9,15 +11,17 @@ class TitleScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey.shade900,
       body: Center(
-        child: IntrinsicWidth(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _qwirkleTitle(),
-              const SizedBox(height: 50),
-              child,
-            ],
+        child: Padding(
+          padding: const EdgeInsets.all(40.0),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _qwirkleTitle(),
+                child,
+              ],
+            ),
           ),
         ),
       ),
@@ -25,23 +29,26 @@ class TitleScreen extends StatelessWidget {
   }
 
   Widget _qwirkleTitle() {
-    return RichText(
-      text: const TextSpan(
-          text: "",
-          style: TextStyle(
-            fontSize: 80,
-            fontWeight: FontWeight.bold,
-          ),
-          children: [
-            TextSpan(text: "Q", style: TextStyle(color: Colors.red)),
-            TextSpan(text: "W", style: TextStyle(color: Colors.blue)),
-            TextSpan(text: "I", style: TextStyle(color: Colors.yellow)),
-            TextSpan(text: "R", style: TextStyle(color: Colors.purple)),
-            TextSpan(text: "K", style: TextStyle(color: Colors.green)),
-            TextSpan(text: "L", style: TextStyle(color: Colors.blue)),
-            TextSpan(text: "E", style: TextStyle(color: Colors.orange)),
-          ]),
-      textAlign: TextAlign.center,
+    return AspectRatio(
+      aspectRatio: 2,
+      child: CustomPaint(
+        painter: LogoPainter(),
+      ),
+    );
+  }
+
+  static Widget asToken(Widget child, [Color? color]) {
+    return AspectRatio(
+      aspectRatio: 1,
+      child: Container(
+        margin: const EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: color ?? Colors.black,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.all(10),
+        child: child,
+      ),
     );
   }
 }
