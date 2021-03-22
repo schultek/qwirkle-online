@@ -29,15 +29,15 @@ class _ScoreBoardState extends State<ScoreBoard> {
         child: Container(
           margin: const EdgeInsets.symmetric(vertical: 50),
           width: 170,
-          decoration: const BoxDecoration(
-            color: Colors.black26,
-            borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),
-          ),
           child: ClipRRect(
             borderRadius: const BorderRadius.horizontal(right: Radius.circular(20)),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Padding(
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.black26,
+                  borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),
+                ),
                 padding: const EdgeInsets.only(left: 15, top: 5, bottom: 5),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

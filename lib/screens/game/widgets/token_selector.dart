@@ -110,15 +110,15 @@ class TokenSelectorState extends State<TokenSelector> with TickerProviderStateMi
           child: Container(
             margin: const EdgeInsets.symmetric(vertical: 50),
             width: itemSize + itemPadding * 4,
-            decoration: const BoxDecoration(
-              color: Colors.black26,
-              borderRadius: BorderRadius.horizontal(left: Radius.circular(20)),
-            ),
             child: ClipRRect(
               borderRadius: const BorderRadius.horizontal(left: Radius.circular(20)),
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                child: Padding(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    color: Colors.black26,
+                    borderRadius: BorderRadius.horizontal(left: Radius.circular(20)),
+                  ),
                   padding: EdgeInsets.all(itemPadding),
                   child: AnimatedSize(
                     vsync: this,

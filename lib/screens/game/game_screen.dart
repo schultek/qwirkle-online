@@ -121,6 +121,10 @@ class GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
                   onChanged: (text) {
                     _nickname = text;
                   },
+                  onSubmitted: (text) {
+                    _nickname = text;
+                    tryJoin();
+                  },
                 ),
               ),
             ),
@@ -128,17 +132,7 @@ class GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
               cursor: SystemMouseCursors.click,
               child: GestureDetector(
                 onTap: () async {
-                  if (_nickname == null) return;
-
-                  bool allowJoin = await widget.game
-                      .requestAction(JoinAction(widget.game.playerId, _nickname!), sendDuplicate: true);
-                  if (allowJoin) {
-                    setState(() {
-                      isJoining = false;
-                    });
-                  } else {
-                    print("NOT ALLOWED");
-                  }
+                  tryJoin();
                 },
                 child: TitleScreen.asToken(
                   const Center(
@@ -160,5 +154,18 @@ class GameScreenState extends State<GameScreen> with TickerProviderStateMixin {
         ),
       ),
     );
+  }
+
+  Future<void> tryJoin() async {
+    if (_nickname == null) return;
+
+    bool allowJoin = await widget.game.requestAction(JoinAction(widget.game.playerId, _nickname!), sendDuplicate: true);
+    if (allowJoin) {
+      setState(() {
+        isJoining = false;
+      });
+    } else {
+      print("NOT ALLOWED");
+    }
   }
 }

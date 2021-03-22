@@ -8,6 +8,7 @@ bool isValidPlacement(PlacementAction placement, Map<Pos, Cell> cells, List<Toke
   var pos = placement.pos;
   bool? verticalSameColor, horizontalSameColor;
   bool hasRow = false, hasColumn = false;
+  int visitedMoves = 0;
   Set<String> line = {};
 
   bool isNextValid(Token next, bool sameColor) {
@@ -30,7 +31,9 @@ bool isValidPlacement(PlacementAction placement, Map<Pos, Cell> cells, List<Toke
     if (!isNextValid(above, verticalSameColor)) {
       return false;
     }
-    if (moves.every((m) => m.pos != pos)) {
+    if (moves.any((m) => m.pos == pos)) {
+      visitedMoves++;
+    } else {
       hasColumn = true;
     }
   }
@@ -45,7 +48,9 @@ bool isValidPlacement(PlacementAction placement, Map<Pos, Cell> cells, List<Toke
     if (!isNextValid(below, verticalSameColor)) {
       return false;
     }
-    if (moves.every((m) => m.pos != pos)) {
+    if (moves.any((m) => m.pos == pos)) {
+      visitedMoves++;
+    } else {
       hasColumn = true;
     }
   }
@@ -62,7 +67,9 @@ bool isValidPlacement(PlacementAction placement, Map<Pos, Cell> cells, List<Toke
     if (!isNextValid(left, horizontalSameColor)) {
       return false;
     }
-    if (moves.every((m) => m.pos != pos)) {
+    if (moves.any((m) => m.pos == pos)) {
+      visitedMoves++;
+    } else {
       hasRow = true;
     }
   }
@@ -77,9 +84,15 @@ bool isValidPlacement(PlacementAction placement, Map<Pos, Cell> cells, List<Toke
     if (!isNextValid(right, horizontalSameColor)) {
       return false;
     }
-    if (moves.every((m) => m.pos != pos)) {
+    if (moves.any((m) => m.pos == pos)) {
+      visitedMoves++;
+    } else {
       hasRow = true;
     }
+  }
+
+  if (visitedMoves != moves.length) {
+    return false;
   }
 
   pos = placement.pos;

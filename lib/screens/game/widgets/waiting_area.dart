@@ -78,7 +78,7 @@ class WaitingArea extends StatelessWidget {
           const SizedBox(height: 40),
           if (Provider.of<Game>(context, listen: false).isGameMaster)
             const Text(
-              "Select a mode:",
+              "Modus Auswählen:",
               style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
             ),
           if (Provider.of<Game>(context, listen: false).isGameMaster)
@@ -86,12 +86,29 @@ class WaitingArea extends StatelessWidget {
               selector: (context, game) => game.mode,
               builder: (context, mode, _) => Padding(
                 padding: const EdgeInsets.only(bottom: 30),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    _modeButton(context, "Normal", "normal", mode),
-                    _modeButton(context, "Infinity", "infinity", mode),
-                    _modeButton(context, "Hard", "hard", mode),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _modeButton(context, "Normal", "normal", mode),
+                        _modeButton(context, "Infinity", "infinity", mode),
+                        _modeButton(context, "Schwer", "hard", mode),
+                      ],
+                    ),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 400),
+                      child: Text(
+                        mode == "normal"
+                            ? "144 Steine. Das Spiel endet wenn alle Steine aufgebraucht sind. Der Spieler mit den meisten Punkten gewinnt."
+                            : mode == "infinity"
+                                ? "Unendlich viele Steine, unendlich viel Zeit, spiel ohne Ende."
+                                : "Ein Spielstein weniger mit jedem Qwirkel. Das Spiel endet wenn der erste Spieler keine Steine mehr übrig hat. Der Spieler mit den meisten Punkten gewinnt.",
+                        style: const TextStyle(color: Colors.white),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
                   ],
                 ),
               ),
